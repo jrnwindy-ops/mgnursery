@@ -1732,11 +1732,12 @@ async function completeTaskFromList(rowId, sectionId, encodedTask) {
   const s = SECTIONS[sectionId];
   if (s && s.tasks) {
     s.tasks = s.tasks.filter(t => {
-      // Remove any task whose label matches (with or without [date] prefix)
       const cleaned = t.replace('TASK:', '').replace(/^\[[\d-]+\]\s*/, '').trim();
       return cleaned !== taskLabel;
     });
   }
+  // Invalidate the history cache for this section so next open shows the new completion
+  delete _sectionHistoryCache[sectionId];
   // Reload cloud tasks then re-render
   await _loadNurseryTaskRows();
   renderHome();
@@ -2079,6 +2080,62 @@ function buildMapCell(s, faded) {
   '</div>';
 }
 
+// Cache for history fetched per section (cleared when reloading)
+let _sectionHistoryCache = {};
+
+async function loadSectionHistory(sectionId) {
+  if (!cloudOk || !sb) return [];
+  try {
+    const { data, error } = await sb.from('nursery_tasks')
+      .select('*')
+      .eq('section_id', sectionId)
+      .in('status', ['completed', 'deleted'])
+      .order('completed_at', { ascending: false, nullsFirst: false });
+    if (error) { console.warn('History load error:', error); return []; }
+    _sectionHistoryCache[sectionId] = data || [];
+    return data || [];
+  } catch (e) {
+    console.warn('History load exception:', e);
+    return [];
+  }
+}
+
+function renderSectionHistory(sectionId) {
+  const rows = _sectionHistoryCache[sectionId];
+  const containerId = 'section-history-content';
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  if (!rows || rows.length === 0) {
+    container.innerHTML = '<div style="padding:14px 12px;color:#9CA3AF;font-size:13px;text-align:center">No history yet for this section</div>';
+    return;
+  }
+  // Render each row as a compact history item
+  const html = rows.map(r => {
+    const isCompleted = r.status === 'completed';
+    const ts = r.completed_at || r.created_at || '';
+    const tsDate = ts ? new Date(ts) : null;
+    const tsLabel = tsDate
+      ? tsDate.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) + ' · ' + tsDate.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})
+      : 'Unknown date';
+    const icon = isCompleted ? '✓' : '✗';
+    const iconColor = isCompleted ? '#16A34A' : '#9CA3AF';
+    const bgColor = isCompleted ? '#F0FDF4' : '#F9FAFB';
+    const borderColor = isCompleted ? '#BBF7D0' : '#E5E7EB';
+    const assigneePart = r.assignee ? '<span style="font-size:11px;background:#DBEAFE;color:#1E40AF;border-radius:6px;padding:1px 6px;margin-left:6px">@' + r.assignee + '</span>' : '';
+    const statusLabel = isCompleted ? 'Completed' : 'Removed';
+    return '<div style="background:' + bgColor + ';border:1px solid ' + borderColor + ';border-radius:10px;padding:10px 12px;margin-bottom:6px">' +
+      '<div style="display:flex;align-items:flex-start;gap:8px">' +
+        '<div style="font-size:16px;color:' + iconColor + ';font-weight:800;line-height:1.2;margin-top:1px">' + icon + '</div>' +
+        '<div style="flex:1">' +
+          '<div style="font-size:13px;font-weight:600;color:#111827">' + (r.task || '(no description)') + assigneePart + '</div>' +
+          '<div style="font-size:11px;color:#6B7280;margin-top:2px">' + statusLabel + ' · ' + tsLabel + '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  container.innerHTML = html;
+}
+
 function openSection(sectionId) {
   currentSectionId = sectionId;
   const s = SECTIONS[sectionId];
@@ -2145,11 +2202,18 @@ function openSection(sectionId) {
         '<div class="section-title"><span>Active Tasks (' + activeTasks.length + ')</span></div>' +
         (tasksHtml ? '<div class="tasks-list">' + tasksHtml + '</div>' : '<div class="no-tasks">No active tasks for this house</div>') +
       '</div>' +
+      '<div style="margin-top:24px">' +
+        '<div class="section-title"><span>History</span></div>' +
+        '<div id="section-history-content"><div style="padding:14px 12px;color:#9CA3AF;font-size:13px;text-align:center">Loading…</div></div>' +
+      '</div>' +
       '<div class="action-bar">' +
         '<button class="btn-primary" onclick="addEntry()">🌱 Add Variety</button>' +
         '<button class="btn-secondary" onclick="openTaskModal()">📋 Add Task</button>' +
       '</div>' +
     '</div>';
+
+  // Fetch and render history asynchronously (doesn't block the rest of the page)
+  loadSectionHistory(sectionId).then(() => renderSectionHistory(sectionId));
 }
 
 function goHome() {
@@ -2280,6 +2344,8 @@ async function deleteTask(idx) {
       await sb.from('nursery_tasks').update({status:'deleted'}).eq('section_id', currentSectionId).eq('task', task.replace('TASK:','').trim()).eq('status','pending');
     } catch(e) {}
   }
+  // Invalidate history cache so the deletion shows up
+  delete _sectionHistoryCache[currentSectionId];
   openSection(currentSectionId);
 }
 
