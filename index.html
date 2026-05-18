@@ -207,6 +207,8 @@ table.sheet td.cell-del button:hover { opacity:1; }
       <div class="app-subtitle">House &amp; Inventory Tracker</div>
     </div>
     <div class="app-actions">
+      <button class="action-btn" onclick="exportBackup()" title="Download backup file">↓ Backup</button>
+      <button class="action-btn" onclick="restoreFromBackup()" title="Restore from backup file">↑ Restore</button>
       <button class="action-btn" onclick="exportReport()">📄 Report</button>
     </div>
   </div>
@@ -352,6 +354,7 @@ table.sheet td.cell-del button:hover { opacity:1; }
     <div class="form-actions">
       <button class="btn-cancel" onclick="closeTaskModal()">Cancel</button>
       <button class="btn-submit" onclick="submitTask()">Save Task</button>
+      <button class="btn-submit" onclick="submitTaskAndSendWA()" style="background:#25D366;margin-left:6px">Save &amp; Send WhatsApp</button>
     </div>
   </div>
 </div>
@@ -2009,6 +2012,14 @@ function closeTaskModal() { document.getElementById('modal-task').classList.remo
 function quickTask(text) { document.getElementById('task-input').value = text; }
 
 async function submitTask() {
+  await _submitTaskCore(false);
+}
+
+async function submitTaskAndSendWA() {
+  await _submitTaskCore(true);
+}
+
+async function _submitTaskCore(sendWhatsApp) {
   const task = document.getElementById('task-input').value.trim();
   if (!task) { alert('Please enter a task description.'); return; }
   const date = document.getElementById('task-date').value;
@@ -2020,6 +2031,18 @@ async function submitTask() {
   closeTaskModal();
   await saveTaskToCloud(currentSectionId, taskWithDate, date, assignee);
   openSection(currentSectionId);
+
+  if (sendWhatsApp) {
+    const sectionLabel = s.house + ' ' + s.subhouse + ' (' + s.sectionType + ')';
+    const dateStr = date ? '\nDate: ' + date : '';
+    const assigneeStr = assignee ? '\nFor: ' + assignee : '';
+    const url = window.location.origin + '#' + currentSectionId;
+    const msg = 'M&G Nursery — Task\n' +
+                'Section: ' + sectionLabel + '\n' +
+                'Task: ' + task + dateStr + assigneeStr + '\n\n' +
+                'Open in app:\n' + url;
+    window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+  }
 }
 
 async function deleteTask(idx) {
@@ -2034,6 +2057,99 @@ async function deleteTask(idx) {
     } catch(e) {}
   }
   openSection(currentSectionId);
+}
+
+function exportBackup() {
+  try {
+    // Build a snapshot of all sections + pending tasks
+    const sectionsData = Object.values(SECTIONS).map(s => ({
+      section_id: s.id,
+      house: s.house,
+      subhouse: s.subhouse,
+      side: s.side,
+      section_idx: s.sectionIdx,
+      section_type: s.sectionType,
+      entries: s.entries || [],
+      take_rate: s.takeRate || 85,
+      tasks: s.tasks || [],
+    }));
+    const data = {
+      sections: sectionsData,
+      exported_at: new Date().toISOString(),
+      device: navigator.userAgent,
+      app: 'mg-nursery-tracker',
+      version: 1,
+    };
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'mg_nursery_backup_' + new Date().toISOString().split('T')[0] + '.json';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+    const totalTrees = sectionsData.reduce((sum, s) =>
+      sum + (s.entries || []).reduce((q, e) => q + (parseInt(e.quantity) || 0), 0), 0);
+    alert('Backup downloaded.\n\n' + sectionsData.length + ' sections, ' + totalTrees.toLocaleString() + ' trees.');
+  } catch (e) {
+    alert('Backup failed: ' + e.message);
+  }
+}
+
+async function restoreFromBackup() {
+  if (!cloudOk) {
+    alert('Cloud not connected. Restore requires Supabase access.');
+    return;
+  }
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = '.json,application/json';
+  fileInput.onchange = async function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const backup = JSON.parse(text);
+      const sections = backup.sections || [];
+      if (!sections.length) {
+        alert('Backup file has no sections.');
+        return;
+      }
+      if (!confirm('Restore ' + sections.length + ' sections from backup?\n\nThis will OVERWRITE existing inventory entries for any section in the backup. Sections not in the backup will be unaffected.\n\nContinue?')) {
+        return;
+      }
+      let ok = 0, fail = 0;
+      for (const s of sections) {
+        const row = {
+          section_id: s.section_id,
+          house: s.house || 'House 1',
+          subhouse: s.subhouse || '',
+          side: s.side || 'North',
+          section_idx: s.section_idx || 1,
+          section_type: s.section_type || 'Tree House',
+          entries: s.entries || [],
+          take_rate: s.take_rate || 85,
+          updated_at: new Date().toISOString(),
+        };
+        try {
+          const res = await sb.from('nursery_sections_v2').upsert(row, { onConflict: 'section_id' });
+          if (res.error) { console.warn('Restore failed for', s.section_id, ':', res.error.message); fail++; }
+          else { ok++; }
+        } catch (err) {
+          console.warn('Restore exception for', s.section_id, ':', err);
+          fail++;
+        }
+      }
+      alert('Restore complete.\n\nRestored: ' + ok + '\nFailed: ' + fail + '\n\nReloading data...');
+      // Reload from cloud to refresh local state
+      await loadFromCloud();
+    } catch (err) {
+      alert('Restore failed: ' + err.message);
+      console.error('Restore error:', err);
+    }
+  };
+  fileInput.click();
 }
 
 function exportReport() {
