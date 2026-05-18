@@ -218,6 +218,7 @@ table.sheet td.cell-del button:hover { opacity:1; }
   <button class="view-btn active" id="view-list-btn" onclick="setView('list')">📋 List</button>
   <button class="view-btn" id="view-map-btn" onclick="setView('map')">🗺️ Map</button>
   <button class="view-btn" id="view-sheet-btn" onclick="setView('sheet')">📊 Sheet</button>
+  <button class="view-btn" id="view-tasks-btn" onclick="setView('tasks')">✓ Tasks <span id="view-tasks-count" style="display:none;background:#D97706;color:#fff;border-radius:8px;padding:1px 6px;font-size:10px;margin-left:3px;font-weight:700"></span></button>
   <input type="text" class="search-input" id="search-input" placeholder="Search variety, rootstock, house..." oninput="renderHome()">
 </div>
 
@@ -1357,6 +1358,8 @@ async function loadFromCloud() {
     
     // Also load Phase 2 variety-pool reservations
     loadReservationsPool().catch(e => console.warn('loadReservationsPool error:', e));
+    // Load task rows (for assignee/rowId lookup in Tasks view)
+    _loadNurseryTaskRows().then(() => { if (currentView === 'tasks') renderHome(); });
     // Re-render and start real-time subscription
     renderHome();
     startRealtimeSubscriptions();
@@ -1525,6 +1528,11 @@ function setView(view) {
   document.getElementById('view-list-btn').classList.toggle('active', view === 'list');
   document.getElementById('view-map-btn').classList.toggle('active', view === 'map');
   document.getElementById('view-sheet-btn').classList.toggle('active', view === 'sheet');
+  const tb = document.getElementById('view-tasks-btn');
+  if (tb) tb.classList.toggle('active', view === 'tasks');
+  // Hide search bar when in Tasks view (filter UI is inline)
+  const search = document.getElementById('search-input');
+  if (search) search.style.display = (view === 'tasks') ? 'none' : '';
   renderHome();
 }
 
@@ -1566,6 +1574,187 @@ function renderHome() {
   if (currentView === 'list') content.innerHTML = renderListView(filtered);
   else if (currentView === 'map') content.innerHTML = renderMapView(filtered);
   else if (currentView === 'sheet') content.innerHTML = renderSheetView(filtered);
+  else if (currentView === 'tasks') content.innerHTML = renderTasksView();
+  // Update Tasks badge count in toggle
+  updateTasksToggleBadge();
+}
+
+// ── TASKS VIEW (Phase 1: see all open tasks across sections) ───────────────
+let _taskFilter = { assignee: 'all', section: 'all' };
+let _nurseryTaskRows = []; // populated from Supabase nursery_tasks table
+
+async function _loadNurseryTaskRows() {
+  if (!cloudOk || !sb) { _nurseryTaskRows = []; return; }
+  try {
+    const { data, error } = await sb.from('nursery_tasks').select('*').eq('status', 'pending').order('scheduled_date', { nullsFirst: false });
+    if (error) { console.warn('Tasks load error:', error); return; }
+    _nurseryTaskRows = data || [];
+  } catch(e) { console.warn('Tasks load failed:', e); }
+}
+
+// Extract a flat list of {section_id, sectionLabel, task, date, assignee, rowId, completable}
+function _flattenAllTasks() {
+  const out = [];
+  // Pull from in-memory SECTIONS object — these are what the UI shows
+  Object.values(SECTIONS).forEach(s => {
+    (s.tasks || []).forEach(t => {
+      if (!t.startsWith('TASK:')) return;
+      let label = t.replace('TASK:', '').trim();
+      let date = '';
+      const dateMatch = label.match(/^\[([\d-]+)\]\s*/);
+      if (dateMatch) { date = dateMatch[1]; label = label.replace(dateMatch[0], '').trim(); }
+      // Find matching task row in cloud data to get assignee + ID
+      const cloudRow = _nurseryTaskRows.find(r => r.section_id === s.id && r.task === label);
+      out.push({
+        section_id: s.id,
+        sectionLabel: s.house + ' · ' + s.subhouse,
+        sectionType: s.sectionType,
+        task: label,
+        date: date || (cloudRow ? cloudRow.scheduled_date : '') || '',
+        assignee: cloudRow ? (cloudRow.assignee || '') : '',
+        rowId: cloudRow ? cloudRow.id : null,
+      });
+    });
+  });
+  // Sort by date (earliest first, undated last)
+  out.sort((a, b) => {
+    if (a.date && !b.date) return -1;
+    if (!a.date && b.date) return 1;
+    if (a.date && b.date) return a.date.localeCompare(b.date);
+    return a.sectionLabel.localeCompare(b.sectionLabel);
+  });
+  return out;
+}
+
+function _allAssignees() {
+  // Discover assignees from cloud task rows; always include standard admins
+  const set = new Set(['Raffi', 'Abram', 'Father']);
+  _nurseryTaskRows.forEach(r => { if (r.assignee && r.assignee.trim()) set.add(r.assignee.trim()); });
+  return Array.from(set);
+}
+
+function setTaskFilter(field, value) {
+  _taskFilter[field] = value;
+  renderHome();
+}
+
+function updateTasksToggleBadge() {
+  const all = _flattenAllTasks();
+  const badge = document.getElementById('view-tasks-count');
+  if (badge) {
+    if (all.length > 0) { badge.textContent = all.length; badge.style.display = 'inline-block'; }
+    else { badge.style.display = 'none'; }
+  }
+}
+
+function renderTasksView() {
+  let all = _flattenAllTasks();
+  const assignees = _allAssignees();
+  // Apply filters
+  let filtered = all.slice();
+  if (_taskFilter.assignee === 'unassigned') {
+    filtered = filtered.filter(t => !t.assignee);
+  } else if (_taskFilter.assignee !== 'all') {
+    filtered = filtered.filter(t => t.assignee === _taskFilter.assignee);
+  }
+  // Today's date for "overdue" highlighting
+  const today = new Date().toISOString().split('T')[0];
+
+  // Filter bar
+  const filterButton = (label, value, count) => {
+    const active = _taskFilter.assignee === value;
+    return '<button onclick="setTaskFilter(\'assignee\',\'' + value + '\')" style="background:' + (active?'#1B4332':'#fff') + ';color:' + (active?'#fff':'#1B4332') + ';border:1px solid ' + (active?'#1B4332':'#E5E7EB') + ';border-radius:18px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">' + label + (count !== undefined ? ' <span style="opacity:.7;font-weight:500">(' + count + ')</span>' : '') + '</button>';
+  };
+
+  const totalAll = all.length;
+  const totalUnassigned = all.filter(t => !t.assignee).length;
+  const assigneeCounts = {};
+  assignees.forEach(a => { assigneeCounts[a] = all.filter(t => t.assignee === a).length; });
+
+  let html = '<div style="padding:14px 16px">';
+  // Header
+  html += '<div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">';
+  html += '<div><div style="font-size:20px;font-weight:800;color:#1B4332;font-family:DM Serif Display,serif">Tasks</div>';
+  html += '<div style="font-size:12px;color:#6B7280;margin-top:2px">' + totalAll + ' open across all sections</div></div>';
+  html += '</div>';
+
+  // Filter pills
+  html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">';
+  html += filterButton('All', 'all', totalAll);
+  assignees.forEach(a => { html += filterButton('@' + a, a, assigneeCounts[a] || 0); });
+  html += filterButton('Unassigned', 'unassigned', totalUnassigned);
+  html += '</div>';
+
+  if (!filtered.length) {
+    html += '<div style="text-align:center;padding:48px 16px;color:#6B7280"><div style="font-size:40px;margin-bottom:8px">✨</div><div style="font-size:14px">No tasks here. Good work.</div></div>';
+  } else {
+    // Task list
+    html += '<div style="display:flex;flex-direction:column;gap:8px">';
+    filtered.forEach((t, idx) => {
+      const isOverdue = t.date && t.date < today;
+      const dateBadge = t.date
+        ? '<span style="font-size:11px;background:' + (isOverdue?'#FEE2E2':'#F3F4F6') + ';color:' + (isOverdue?'#991B1B':'#374151') + ';border-radius:8px;padding:2px 7px;font-weight:600">' + (isOverdue?'⚠ ':'') + t.date + '</span>'
+        : '<span style="font-size:11px;background:#F3F4F6;color:#9CA3AF;border-radius:8px;padding:2px 7px">No date</span>';
+      const assigneeBadge = t.assignee
+        ? '<span style="font-size:11px;background:#DBEAFE;color:#1E40AF;border-radius:8px;padding:2px 7px;font-weight:600">@' + t.assignee + '</span>'
+        : '<span style="font-size:11px;background:#FEF3C7;color:#92400E;border-radius:8px;padding:2px 7px;font-weight:600">Unassigned</span>';
+
+      // Buttons row
+      const completeBtn = t.rowId
+        ? '<button onclick="completeTaskFromList(\'' + t.rowId + '\',\'' + t.section_id + '\',\'' + encodeURIComponent(t.task) + '\')" style="background:#1B4332;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex:1">✓ Done</button>'
+        : '<button disabled style="background:#E5E7EB;color:#9CA3AF;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;font-family:inherit;flex:1" title="No cloud record found">✓ Done</button>';
+      const waBtn = '<button onclick="sendTaskWAFromList(\'' + t.section_id + '\',\'' + encodeURIComponent(t.task) + '\',\'' + (t.date || '') + '\',\'' + (t.assignee || '') + '\')" style="background:#25D366;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex:1">WhatsApp</button>';
+      const openBtn = '<button onclick="openSection(\'' + t.section_id + '\')" style="background:#fff;color:#1B4332;border:1px solid #1B4332;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex:1">Open section</button>';
+
+      html += '<div style="background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:14px;box-shadow:0 1px 2px rgba(0,0,0,.04)">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">' +
+          '<div style="font-size:15px;font-weight:700;color:#111827;line-height:1.3;flex:1">' + t.task + '</div>' +
+        '</div>' +
+        '<div style="font-size:12px;color:#6B7280;margin-bottom:8px">' + t.sectionLabel + ' · ' + t.sectionType + '</div>' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">' + assigneeBadge + dateBadge + '</div>' +
+        '<div style="display:flex;gap:6px;flex-wrap:wrap">' + completeBtn + waBtn + openBtn + '</div>' +
+      '</div>';
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+async function completeTaskFromList(rowId, sectionId, encodedTask) {
+  const taskLabel = decodeURIComponent(encodedTask);
+  if (!confirm('Mark this task as complete?')) return;
+  // Update cloud row to status=completed
+  try {
+    await sb.from('nursery_tasks').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', rowId);
+  } catch(e) { console.warn('Complete task cloud error:', e); }
+  // Remove from local section's tasks array
+  const s = SECTIONS[sectionId];
+  if (s && s.tasks) {
+    s.tasks = s.tasks.filter(t => {
+      // Remove any task whose label matches (with or without [date] prefix)
+      const cleaned = t.replace('TASK:', '').replace(/^\[[\d-]+\]\s*/, '').trim();
+      return cleaned !== taskLabel;
+    });
+  }
+  // Reload cloud tasks then re-render
+  await _loadNurseryTaskRows();
+  renderHome();
+}
+
+function sendTaskWAFromList(sectionId, encodedTask, date, assignee) {
+  const taskLabel = decodeURIComponent(encodedTask);
+  const s = SECTIONS[sectionId];
+  if (!s) return;
+  const sectionLabel = s.house + ' ' + s.subhouse + ' (' + s.sectionType + ')';
+  const dateStr = date ? '\nDate: ' + date : '';
+  const assigneeStr = assignee ? '\nFor: ' + assignee : '';
+  const url = window.location.origin + '#' + sectionId;
+  const msg = 'M&G Nursery — Task\n' +
+              'Section: ' + sectionLabel + '\n' +
+              'Task: ' + taskLabel + dateStr + assigneeStr + '\n\n' +
+              'Open in app:\n' + url;
+  window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
 }
 
 function renderListView(sections) {
@@ -1596,8 +1785,13 @@ function buildCard(s) {
     ? '<div class="sub-empty">Empty</div>'
     : visible.map(e => '<div class="sub-variety-row"><strong>' + (e.scion || '—') + '</strong>' + (e.rootstock ? ' / ' + e.rootstock : '') + ' · ' + (e.quantity || 0).toLocaleString() + '</div>').join('') +
       (more > 0 ? '<div class="sub-variety-row" style="color:var(--g600);font-weight:700">+' + more + ' more</div>' : '');
-  return '<div class="sub-card" onclick="openSection(\'' + s.id + '\')">' +
+  const taskCount = (s.tasks || []).filter(t => t.startsWith('TASK:')).length;
+  const taskBadge = taskCount > 0
+    ? '<div style="position:absolute;top:8px;right:8px;background:#D97706;color:#fff;border-radius:10px;padding:2px 7px;font-size:10px;font-weight:800;line-height:1.4;min-width:18px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.15)">' + taskCount + ' ✓</div>'
+    : '';
+  return '<div class="sub-card" style="position:relative" onclick="openSection(\'' + s.id + '\')">' +
     '<div class="sub-status ' + statusClass + '"></div>' +
+    taskBadge +
     '<div class="sub-id">' + s.house + ' · ' + s.subhouse + '</div>' +
     '<div class="sub-type">' + s.sectionType + '</div>' +
     '<div class="sub-varieties">' + varHtml + '</div>' +
