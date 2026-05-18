@@ -1320,21 +1320,119 @@ async function loadFromCloud() {
   if (!cloudOk) return;
   try {
     const r = await sb.from('nursery_sections_v2').select('*');
-    if (r.data) {
+    if (r.error) { console.warn('Nursery cloud load error:', r.error); return; }
+    
+    if (!r.data || r.data.length === 0) {
+      // Empty cloud — seed it from the hardcoded SECTIONS object
+      console.log('[nursery] Cloud is empty, seeding initial data...');
+      await seedCloudFromLocal();
+    } else {
+      // Cloud has data — overlay onto SECTIONS (cloud wins over hardcoded defaults)
+      console.log('[nursery] Loaded ' + r.data.length + ' sections from cloud');
       r.data.forEach(row => {
         if (SECTIONS[row.section_id]) {
           if (row.entries) SECTIONS[row.section_id].entries = row.entries;
+          if (row.take_rate !== undefined && row.take_rate !== null) {
+            SECTIONS[row.section_id].takeRate = row.take_rate;
+          }
         }
       });
     }
-    const tr = await sb.from('nursery_tasks').select('*').eq('status','pending');
+    
+    // Load pending tasks
+    const tr = await sb.from('nursery_tasks').select('*').eq('status', 'pending');
     if (tr.data) {
+      // Reset tasks first so we don't double-add on reload
+      Object.values(SECTIONS).forEach(s => { s.tasks = []; });
       tr.data.forEach(t => {
-        if (SECTIONS[t.section_id]) SECTIONS[t.section_id].tasks.push('TASK: ' + t.task);
+        if (SECTIONS[t.section_id]) {
+          const dateStr = t.scheduled_date ? '[' + t.scheduled_date + '] ' : '';
+          SECTIONS[t.section_id].tasks.push('TASK: ' + dateStr + t.task);
+        }
       });
     }
+    
+    // Re-render and start real-time subscription
     renderHome();
-  } catch(e) {}
+    startRealtimeSubscriptions();
+  } catch(e) {
+    console.warn('Nursery cloud load failed:', e);
+  }
+}
+
+async function seedCloudFromLocal() {
+  // One-time bulk seed: push all 56 sections from hardcoded SECTIONS to Supabase
+  if (!cloudOk) return;
+  const rows = Object.values(SECTIONS).map(s => ({
+    section_id: s.id,
+    house: s.house,
+    subhouse: s.subhouse,
+    side: s.side,
+    section_idx: s.sectionIdx,
+    section_type: s.sectionType,
+    entries: s.entries || [],
+    take_rate: s.takeRate || 70,
+    updated_at: new Date().toISOString(),
+  }));
+  // Batch insert in chunks of 20 to be safe
+  const CHUNK = 20;
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const chunk = rows.slice(i, i + CHUNK);
+    const { error } = await sb.from('nursery_sections_v2').upsert(chunk, { onConflict: 'section_id' });
+    if (error) { console.warn('Seed chunk error:', error); }
+  }
+  console.log('[nursery] Seeded ' + rows.length + ' sections to cloud');
+}
+
+function startRealtimeSubscriptions() {
+  if (!cloudOk || window._nurseryRealtimeStarted) return;
+  window._nurseryRealtimeStarted = true;
+  
+  // Subscribe to section changes (any device's edit will be reflected here)
+  sb.channel('nursery-sections-realtime')
+    .on('postgres_changes', {event: '*', schema: 'public', table: 'nursery_sections_v2'}, payload => {
+      const row = payload.new || payload.old;
+      if (!row || !row.section_id) return;
+      if (SECTIONS[row.section_id]) {
+        if (payload.eventType === 'DELETE') {
+          SECTIONS[row.section_id].entries = [];
+        } else {
+          if (row.entries) SECTIONS[row.section_id].entries = row.entries;
+          if (row.take_rate !== undefined && row.take_rate !== null) {
+            SECTIONS[row.section_id].takeRate = row.take_rate;
+          }
+        }
+        // Only re-render if not currently editing (avoid clobbering user input)
+        if (!document.getElementById('entry-modal-bg')?.classList.contains('open')) {
+          renderHome();
+          // Refresh open section view if any
+          if (window.currentSectionId === row.section_id && typeof openSection === 'function') {
+            openSection(window.currentSectionId);
+          }
+        }
+      }
+    })
+    .subscribe();
+  
+  // Subscribe to task changes
+  sb.channel('nursery-tasks-realtime')
+    .on('postgres_changes', {event: '*', schema: 'public', table: 'nursery_tasks'}, async () => {
+      // Easiest: just reload all pending tasks
+      const tr = await sb.from('nursery_tasks').select('*').eq('status', 'pending');
+      if (tr.data) {
+        Object.values(SECTIONS).forEach(s => { s.tasks = []; });
+        tr.data.forEach(t => {
+          if (SECTIONS[t.section_id]) {
+            const dateStr = t.scheduled_date ? '[' + t.scheduled_date + '] ' : '';
+            SECTIONS[t.section_id].tasks.push('TASK: ' + dateStr + t.task);
+          }
+        });
+        renderHome();
+      }
+    })
+    .subscribe();
+  
+  console.log('[nursery] Real-time subscriptions started');
 }
 
 async function saveSectionToCloud(s) {
