@@ -1355,12 +1355,32 @@ async function loadFromCloud() {
       });
     }
     
+    // Also load Phase 2 variety-pool reservations
+    loadReservationsPool().catch(e => console.warn('loadReservationsPool error:', e));
     // Re-render and start real-time subscription
     renderHome();
     startRealtimeSubscriptions();
   } catch(e) {
     console.warn('Nursery cloud load failed:', e);
   }
+}
+
+// ── RESERVATIONS POOL (Phase 2: CRM↔Nursery integration) ───────────────────
+// Variety-pool reservations from the CRM. These exist BEFORE Phase 3 fulfillment
+// assigns trees to specific houses. The Reserved tile sums both:
+//   - Pool reservations from CRM contracts (active status)
+//   - Per-entry reservedQty (Phase 3, when trees are pinned to specific sections)
+let RESERVATIONS_POOL_TOTAL = 0;
+
+async function loadReservationsPool() {
+  if (!cloudOk || !sb) return;
+  try {
+    const { data, error } = await sb.from('reservations').select('quantity, status').eq('status', 'active');
+    if (error) { console.warn('Reservations pool load error:', error); return; }
+    RESERVATIONS_POOL_TOTAL = (data || []).reduce((sum, r) => sum + (parseInt(r.quantity) || 0), 0);
+    console.log('[reservations] Loaded pool total: ' + RESERVATIONS_POOL_TOTAL.toLocaleString() + ' active reservations');
+    if (typeof renderStats === 'function') try { renderStats(); } catch(e){}
+  } catch (e) { console.warn('Reservations pool load failed:', e); }
 }
 
 async function seedCloudFromLocal() {
@@ -1435,7 +1455,14 @@ function startRealtimeSubscriptions() {
     })
     .subscribe();
   
-  console.log('[nursery] Real-time subscriptions started');
+  // Subscribe to reservations changes (Phase 2: CRM-driven changes)
+  sb.channel('nursery-reservations-realtime')
+    .on('postgres_changes', {event: '*', schema: 'public', table: 'reservations'}, async () => {
+      await loadReservationsPool();
+    })
+    .subscribe();
+
+  console.log('[nursery] Real-time subscriptions started (sections, tasks, reservations)');
 }
 
 async function saveSectionToCloud(s) {
@@ -1477,7 +1504,10 @@ function calcStats() {
     }
     tasks += (s.tasks || []).filter(t => t.startsWith('TASK:')).length;
   });
-  return { active, totalQty, sellable, reserved, tasks, totalEntries };
+  // Add variety-pool reservations from CRM contracts (Phase 2)
+  // Note: this is at the variety-pool level — Phase 3 will pin to specific entries
+  const totalReserved = reserved + (RESERVATIONS_POOL_TOTAL || 0);
+  return { active, totalQty, sellable, reserved: totalReserved, tasks, totalEntries };
 }
 
 function renderStats() {
