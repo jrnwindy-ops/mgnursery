@@ -2315,11 +2315,9 @@ async function _submitTaskCore(sendWhatsApp) {
   const s = SECTIONS[currentSectionId];
   if (!s) return;
   const taskWithDate = date ? '[' + date + '] ' + task : task;
-  s.tasks.push('TASK: ' + taskWithDate);
-  closeTaskModal();
-  await saveTaskToCloud(currentSectionId, taskWithDate, date, assignee);
-  openSection(currentSectionId);
 
+  // STEP 1: If sending WhatsApp, OPEN THE LINK FIRST while we still have a valid user gesture.
+  // If we await first, browsers (especially mobile) will block the popup silently.
   if (sendWhatsApp) {
     const sectionLabel = s.house + ' ' + s.subhouse + ' (' + s.sectionType + ')';
     const dateStr = date ? '\nDate: ' + date : '';
@@ -2329,8 +2327,26 @@ async function _submitTaskCore(sendWhatsApp) {
                 'Section: ' + sectionLabel + '\n' +
                 'Task: ' + task + dateStr + assigneeStr + '\n\n' +
                 'Open in app:\n' + url;
-    window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+    // window.location.href works more reliably on mobile than window.open() for external links
+    const waUrl = 'https://wa.me/?text=' + encodeURIComponent(msg);
+    const w = window.open(waUrl, '_blank');
+    if (!w || w.closed || typeof w.closed === 'undefined') {
+      // Popup was blocked - fall back to a direct location change as last resort
+      // First save the task synchronously then navigate
+      console.warn('[task-wa] window.open blocked, falling back to location.href');
+      // Save in background, navigate immediately
+      saveTaskToCloud(currentSectionId, taskWithDate, date, assignee).catch(e => console.warn(e));
+      s.tasks.push('TASK: ' + taskWithDate);
+      window.location.href = waUrl;
+      return;
+    }
   }
+
+  // STEP 2: Now do the local + cloud save
+  s.tasks.push('TASK: ' + taskWithDate);
+  closeTaskModal();
+  await saveTaskToCloud(currentSectionId, taskWithDate, date, assignee);
+  openSection(currentSectionId);
 }
 
 async function deleteTask(idx) {
