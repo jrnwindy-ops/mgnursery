@@ -1481,14 +1481,16 @@ async function saveSectionToCloud(s) {
 }
 
 async function saveTaskToCloud(sectionId, task, date, assignee) {
-  if (!cloudOk) return;
+  if (!cloudOk) return null;
   try {
-    await sb.from('nursery_tasks').insert({
+    const { data, error } = await sb.from('nursery_tasks').insert({
       section_id: sectionId, task: task,
       scheduled_date: date || null, assignee: assignee || null,
       status: 'pending', created_at: new Date().toISOString(),
-    });
-  } catch(e) {}
+    }).select().single();
+    if (error) { console.warn('saveTaskToCloud error:', error); return null; }
+    return data ? data.id : null;
+  } catch(e) { console.warn('saveTaskToCloud exception:', e); return null; }
 }
 
 function calcStats() {
@@ -1703,7 +1705,7 @@ function renderTasksView() {
       const completeBtn = t.rowId
         ? '<button onclick="completeTaskFromList(\'' + t.rowId + '\',\'' + t.section_id + '\',\'' + encodeURIComponent(t.task) + '\')" style="background:#1B4332;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex:1">✓ Done</button>'
         : '<button disabled style="background:#E5E7EB;color:#9CA3AF;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;font-family:inherit;flex:1" title="No cloud record found">✓ Done</button>';
-      const waBtn = '<button onclick="sendTaskWAFromList(\'' + t.section_id + '\',\'' + encodeURIComponent(t.task) + '\',\'' + (t.date || '') + '\',\'' + (t.assignee || '') + '\')" style="background:#25D366;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex:1">WhatsApp</button>';
+      const waBtn = '<button onclick="sendTaskWAFromList(\'' + t.section_id + '\',\'' + encodeURIComponent(t.task) + '\',\'' + (t.date || '') + '\',\'' + (t.assignee || '') + '\',\'' + (t.rowId || '') + '\')" style="background:#25D366;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex:1">WhatsApp</button>';
       const openBtn = '<button onclick="openSection(\'' + t.section_id + '\')" style="background:#fff;color:#1B4332;border:1px solid #1B4332;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex:1">Open section</button>';
 
       html += '<div style="background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:14px;box-shadow:0 1px 2px rgba(0,0,0,.04)">' +
@@ -1743,18 +1745,23 @@ async function completeTaskFromList(rowId, sectionId, encodedTask) {
   renderHome();
 }
 
-function sendTaskWAFromList(sectionId, encodedTask, date, assignee) {
+function sendTaskWAFromList(sectionId, encodedTask, date, assignee, rowId) {
   const taskLabel = decodeURIComponent(encodedTask);
   const s = SECTIONS[sectionId];
   if (!s) return;
   const sectionLabel = s.house + ' ' + s.subhouse + ' (' + s.sectionType + ')';
   const dateStr = date ? '\nDate: ' + date : '';
   const assigneeStr = assignee ? '\nFor: ' + assignee : '';
-  const url = window.location.origin + '#' + sectionId;
+  // If we have the cloud rowId, build a one-tap complete link. Otherwise just a section link.
+  const baseUrl = window.location.origin;
+  const url = rowId
+    ? baseUrl + '#section=' + encodeURIComponent(sectionId) + '&complete=' + rowId
+    : baseUrl + '#section=' + encodeURIComponent(sectionId);
+  const linkLabel = rowId ? 'Tap to mark complete when done:' : 'Open in app:';
   const msg = 'M&G Nursery — Task\n' +
               'Section: ' + sectionLabel + '\n' +
               'Task: ' + taskLabel + dateStr + assigneeStr + '\n\n' +
-              'Open in app:\n' + url;
+              linkLabel + '\n' + url;
   window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
 }
 
@@ -2307,6 +2314,30 @@ async function submitTaskAndSendWA() {
   await _submitTaskCore(true);
 }
 
+// Generate a v4-style UUID client-side so we can include the task ID in the WhatsApp link
+// before the database insert completes. Then the cloud insert uses our pre-made ID.
+function _uuid() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+async function _saveTaskToCloudWithId(taskId, sectionId, task, date, assignee) {
+  if (!cloudOk) return null;
+  try {
+    const { data, error } = await sb.from('nursery_tasks').insert({
+      id: taskId,
+      section_id: sectionId, task: task,
+      scheduled_date: date || null, assignee: assignee || null,
+      status: 'pending', created_at: new Date().toISOString(),
+    }).select().single();
+    if (error) { console.warn('saveTaskWithId error:', error); return null; }
+    return data ? data.id : null;
+  } catch(e) { console.warn('saveTaskWithId exception:', e); return null; }
+}
+
 async function _submitTaskCore(sendWhatsApp) {
   const task = document.getElementById('task-input').value.trim();
   if (!task) { alert('Please enter a task description.'); return; }
@@ -2316,36 +2347,37 @@ async function _submitTaskCore(sendWhatsApp) {
   if (!s) return;
   const taskWithDate = date ? '[' + date + '] ' + task : task;
 
+  // Pre-generate a task ID client-side so we can include it in the WhatsApp link
+  // before the cloud insert completes
+  const taskId = _uuid();
+
   // STEP 1: If sending WhatsApp, OPEN THE LINK FIRST while we still have a valid user gesture.
-  // If we await first, browsers (especially mobile) will block the popup silently.
+  // Use the pre-generated taskId so the recipient can one-tap to complete.
   if (sendWhatsApp) {
     const sectionLabel = s.house + ' ' + s.subhouse + ' (' + s.sectionType + ')';
     const dateStr = date ? '\nDate: ' + date : '';
     const assigneeStr = assignee ? '\nFor: ' + assignee : '';
-    const url = window.location.origin + '#' + currentSectionId;
+    const baseUrl = window.location.origin;
+    const completeUrl = baseUrl + '#section=' + encodeURIComponent(currentSectionId) + '&complete=' + taskId;
     const msg = 'M&G Nursery — Task\n' +
                 'Section: ' + sectionLabel + '\n' +
                 'Task: ' + task + dateStr + assigneeStr + '\n\n' +
-                'Open in app:\n' + url;
-    // window.location.href works more reliably on mobile than window.open() for external links
+                'Tap to mark complete when done:\n' + completeUrl;
     const waUrl = 'https://wa.me/?text=' + encodeURIComponent(msg);
     const w = window.open(waUrl, '_blank');
     if (!w || w.closed || typeof w.closed === 'undefined') {
-      // Popup was blocked - fall back to a direct location change as last resort
-      // First save the task synchronously then navigate
       console.warn('[task-wa] window.open blocked, falling back to location.href');
-      // Save in background, navigate immediately
-      saveTaskToCloud(currentSectionId, taskWithDate, date, assignee).catch(e => console.warn(e));
+      _saveTaskToCloudWithId(taskId, currentSectionId, taskWithDate, date, assignee).catch(e => console.warn(e));
       s.tasks.push('TASK: ' + taskWithDate);
       window.location.href = waUrl;
       return;
     }
   }
 
-  // STEP 2: Now do the local + cloud save
+  // STEP 2: Now do the local + cloud save (using our pre-generated taskId)
   s.tasks.push('TASK: ' + taskWithDate);
   closeTaskModal();
-  await saveTaskToCloud(currentSectionId, taskWithDate, date, assignee);
+  await _saveTaskToCloudWithId(taskId, currentSectionId, taskWithDate, date, assignee);
   openSection(currentSectionId);
 }
 
@@ -2527,8 +2559,109 @@ function exportReport() {
   window.open(url, '_blank');
 }
 
+// ── DEEP LINK HANDLER ─────────────────────────────────────────────────────
+// Handles URLs like:
+//   #section=H2-South12                  → opens that section
+//   #section=H2-South12&complete=<uuid>  → opens section + prompts to complete task
+//   #H2-South12                          → legacy format, opens that section
+async function handleDeepLink() {
+  const hash = window.location.hash.replace(/^#/, '');
+  if (!hash) return;
+
+  let sectionId = '';
+  let completeId = '';
+
+  if (hash.indexOf('=') >= 0) {
+    // Modern format: section=...&complete=...
+    const params = new URLSearchParams(hash);
+    sectionId = decodeURIComponent(params.get('section') || '');
+    completeId = params.get('complete') || '';
+  } else {
+    // Legacy format: just the section ID after #
+    sectionId = hash;
+  }
+
+  if (sectionId && SECTIONS[sectionId]) {
+    openSection(sectionId);
+  }
+
+  if (completeId) {
+    // Wait briefly for cloud task rows to load, then show completion prompt
+    setTimeout(() => _promptCompleteFromLink(completeId, sectionId), 500);
+  }
+}
+
+async function _promptCompleteFromLink(taskId, sectionId) {
+  // Fetch fresh task data to confirm it exists and is still pending
+  if (!cloudOk) {
+    alert('Cloud not connected — cannot mark task complete right now.');
+    return;
+  }
+  try {
+    const { data, error } = await sb.from('nursery_tasks').select('*').eq('id', taskId).single();
+    if (error || !data) {
+      alert('This task could not be found. It may have been deleted.');
+      // Clear the hash so refreshing doesn't re-prompt
+      history.replaceState(null, '', window.location.pathname);
+      return;
+    }
+    if (data.status === 'completed') {
+      alert('This task was already marked complete on ' + new Date(data.completed_at).toLocaleString() + '.');
+      history.replaceState(null, '', window.location.pathname + '#section=' + encodeURIComponent(sectionId));
+      return;
+    }
+    if (data.status === 'deleted') {
+      alert('This task was removed.');
+      history.replaceState(null, '', window.location.pathname + '#section=' + encodeURIComponent(sectionId));
+      return;
+    }
+    // Pending — ask for confirmation
+    const dateStr = data.scheduled_date ? '\nDate: ' + data.scheduled_date : '';
+    const assigneeStr = data.assignee ? '\nFor: @' + data.assignee : '';
+    const ok = confirm('Mark this task as complete?\n\n"' + data.task + '"' + dateStr + assigneeStr);
+    if (!ok) {
+      history.replaceState(null, '', window.location.pathname + '#section=' + encodeURIComponent(sectionId));
+      return;
+    }
+    // Mark complete in cloud
+    const upd = await sb.from('nursery_tasks').update({
+      status: 'completed',
+      completed_at: new Date().toISOString(),
+    }).eq('id', taskId);
+    if (upd.error) {
+      alert('Could not save: ' + upd.error.message);
+      return;
+    }
+    // Remove from local memory
+    const s = SECTIONS[sectionId];
+    if (s && s.tasks) {
+      const cleanedLabel = data.task.replace(/^\[[\d-]+\]\s*/, '').trim();
+      s.tasks = s.tasks.filter(t => {
+        const local = t.replace('TASK:', '').replace(/^\[[\d-]+\]\s*/, '').trim();
+        return local !== cleanedLabel;
+      });
+    }
+    // Invalidate history cache so completion appears
+    if (typeof _sectionHistoryCache !== 'undefined') delete _sectionHistoryCache[sectionId];
+    // Reload tasks then re-render
+    if (typeof _loadNurseryTaskRows === 'function') await _loadNurseryTaskRows();
+    // Clear the hash and reopen the section
+    history.replaceState(null, '', window.location.pathname + '#section=' + encodeURIComponent(sectionId));
+    alert('Task marked complete ✓');
+    if (sectionId && SECTIONS[sectionId]) openSection(sectionId);
+    else renderHome();
+  } catch(e) {
+    console.warn('_promptCompleteFromLink exception:', e);
+    alert('Something went wrong. Try again from the Tasks tab.');
+  }
+}
+
 initSupabase();
 renderHome();
+// Process any deep link in the URL (e.g. from a WhatsApp message)
+// Slight delay so SECTIONS is fully populated first
+setTimeout(handleDeepLink, 300);
+window.addEventListener('hashchange', handleDeepLink);
 
 document.getElementById('modal-entry').addEventListener('click', function(e) { if (e.target === this) closeEntryModal(); });
 document.getElementById('modal-task').addEventListener('click', function(e) { if (e.target === this) closeTaskModal(); });
