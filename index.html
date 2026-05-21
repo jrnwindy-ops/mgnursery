@@ -29,6 +29,9 @@ button, input, textarea, select { font-family:inherit; }
 .app-actions { display:flex; gap:6px; flex-wrap:wrap; }
 .action-btn { background:rgba(255,255,255,.12); color:#fff; border:none; border-radius:8px; padding:6px 11px; font-size:11px; font-weight:700; cursor:pointer; }
 .action-btn:hover { background:rgba(255,255,255,.2); }
+.lang-toggle { display:flex; gap:3px; margin-right:4px; }
+.lang-btn { background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2); border-radius:14px; padding:4px 9px; font-size:11px; font-weight:700; color:#fff; cursor:pointer; font-family:inherit; transition:background .15s; }
+.lang-btn.active { background:var(--g600); border-color:var(--g600); }
 
 .view-toggle { background:var(--surf); border-bottom:1px solid var(--bd); padding:10px 16px; display:flex; gap:6px; position:sticky; top:60px; z-index:40; flex-wrap:wrap; }
 .view-btn { background:var(--bg); border:1.5px solid var(--bd); border-radius:8px; padding:8px 12px; font-size:12px; font-weight:700; color:var(--tx2); cursor:pointer; }
@@ -203,23 +206,27 @@ table.sheet td.cell-del button:hover { opacity:1; }
 <div class="app-header">
   <div class="app-header-row">
     <div>
-      <div class="app-title">M&amp;G Nursery</div>
-      <div class="app-subtitle">House &amp; Inventory Tracker</div>
+      <div class="app-title" data-i18n="app_title">M&amp;G Nursery</div>
+      <div class="app-subtitle" data-i18n="app_subtitle">House &amp; Inventory Tracker</div>
     </div>
     <div class="app-actions">
-      <button class="action-btn" onclick="exportBackup()" title="Download backup file">↓ Backup</button>
-      <button class="action-btn" onclick="restoreFromBackup()" title="Restore from backup file">↑ Restore</button>
-      <button class="action-btn" onclick="exportReport()">📄 Report</button>
+      <div class="lang-toggle">
+        <button class="lang-btn active" id="btn-lang-en" onclick="setLang('en')">EN</button>
+        <button class="lang-btn" id="btn-lang-es" onclick="setLang('es')">ES</button>
+      </div>
+      <button class="action-btn" onclick="exportBackup()" title="Download backup file" data-i18n="btn_backup">↓ Backup</button>
+      <button class="action-btn" onclick="restoreFromBackup()" title="Restore from backup file" data-i18n="btn_restore">↑ Restore</button>
+      <button class="action-btn" onclick="exportReport()" data-i18n="btn_report">📄 Report</button>
     </div>
   </div>
 </div>
 
 <div class="view-toggle">
-  <button class="view-btn active" id="view-list-btn" onclick="setView('list')">📋 List</button>
-  <button class="view-btn" id="view-map-btn" onclick="setView('map')">🗺️ Map</button>
-  <button class="view-btn" id="view-sheet-btn" onclick="setView('sheet')">📊 Sheet</button>
-  <button class="view-btn" id="view-tasks-btn" onclick="setView('tasks')">✓ Tasks <span id="view-tasks-count" style="display:none;background:#D97706;color:#fff;border-radius:8px;padding:1px 6px;font-size:10px;margin-left:3px;font-weight:700"></span></button>
-  <input type="text" class="search-input" id="search-input" placeholder="Search variety, rootstock, house..." oninput="renderHome()">
+  <button class="view-btn active" id="view-list-btn" onclick="setView('list')" data-i18n="view_list">📋 List</button>
+  <button class="view-btn" id="view-map-btn" onclick="setView('map')" data-i18n="view_map">🗺️ Map</button>
+  <button class="view-btn" id="view-sheet-btn" onclick="setView('sheet')" data-i18n="view_sheet">📊 Sheet</button>
+  <button class="view-btn" id="view-tasks-btn" onclick="setView('tasks')"><span data-i18n="view_tasks">✓ Tasks</span> <span id="view-tasks-count" style="display:none;background:#D97706;color:#fff;border-radius:8px;padding:1px 6px;font-size:10px;margin-left:3px;font-weight:700"></span></button>
+  <input type="text" class="search-input" id="search-input" placeholder="Search variety, rootstock, house..." data-i18n-ph="search_placeholder" oninput="renderHome()">
 </div>
 
 <div class="stats-bar" id="stats-bar"></div>
@@ -233,21 +240,21 @@ table.sheet td.cell-del button:hover { opacity:1; }
 <div class="modal-bg" id="modal-entry">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div style="font-size:18px;font-weight:800;margin-bottom:4px" id="entry-modal-title">Add Variety Entry</div>
+    <div style="font-size:18px;font-weight:800;margin-bottom:4px" id="entry-modal-title" data-i18n="modal_add_entry">Add Variety Entry</div>
     <div style="font-size:12px;color:var(--tx3);margin-bottom:14px" id="entry-modal-section"></div>
 
-    <label class="form-label">Type</label>
+    <label class="form-label" data-i18n="lbl_type">Type</label>
     <select class="form-input" id="entry-type">
-      <option value="Grafted Tree">Grafted Tree (default)</option>
-      <option value="Seedling">Seedling (rootstock only, not grafted yet)</option>
-      <option value="Sleeve">Sleeve (empty, awaiting seedling)</option>
+      <option value="Grafted Tree" data-i18n="type_grafted">Grafted Tree (default)</option>
+      <option value="Seedling" data-i18n="type_seedling">Seedling (rootstock only, not grafted yet)</option>
+      <option value="Sleeve" data-i18n="type_sleeve">Sleeve (empty, awaiting seedling)</option>
     </select>
 
-    <label class="form-label">Placement (Row in House)</label>
+    <label class="form-label" data-i18n="lbl_placement">Placement (Row in House)</label>
     <div class="form-row">
       <div>
         <select class="form-input" id="entry-row">
-          <option value="">— Row —</option>
+          <option value="" data-i18n="opt_row">— Row —</option>
           <option value="1">Row 1</option>
           <option value="2">Row 2</option>
           <option value="3">Row 3</option>
@@ -260,7 +267,7 @@ table.sheet td.cell-del button:hover { opacity:1; }
       </div>
       <div>
         <select class="form-input" id="entry-rowsub">
-          <option value="">— Sub (optional) —</option>
+          <option value="" data-i18n="opt_sub">— Sub (optional) —</option>
           <option value="A">A</option>
           <option value="B">B</option>
           <option value="C">C</option>
@@ -268,9 +275,9 @@ table.sheet td.cell-del button:hover { opacity:1; }
       </div>
     </div>
 
-    <label class="form-label">Scion / Variety</label>
+    <label class="form-label" data-i18n="lbl_scion">Scion / Variety</label>
     <select class="form-input" id="entry-scion">
-      <option value="">— Select scion —</option>
+      <option value="" data-i18n="opt_select_scion">— Select scion —</option>
       <option value="None">None (rootstock only)</option>
       <option value="Tango">Tango</option>
       <option value="Page">Page</option>
@@ -1339,6 +1346,309 @@ let currentEntryIdx = null;
 let sb = null;
 let cloudOk = false;
 
+// ─── INTERNATIONALIZATION ────────────────────────────────────────────────────
+// Translations follow Block Book pattern. Strings without accents (matching
+// established Block Book convention). Variety/rootstock names and data values
+// remain in English — they're proper nouns of the trade.
+let lang = (function(){
+  try { return localStorage.getItem('mg_nursery_lang') || 'en'; } catch(e) { return 'en'; }
+})();
+
+const T_DICT = {
+  en: {
+    // Header
+    app_title: 'M&G Nursery',
+    app_subtitle: 'House & Inventory Tracker',
+    btn_backup: '↓ Backup',
+    btn_restore: '↑ Restore',
+    btn_report: '📄 Report',
+    search_placeholder: 'Search variety, rootstock, house...',
+    // View tabs
+    view_list: '📋 List',
+    view_map: '🗺️ Map',
+    view_sheet: '📊 Sheet',
+    view_tasks: '✓ Tasks',
+    // Stat pills
+    stat_active: 'Active',
+    stat_planted: 'Planted',
+    stat_sellable: 'Sellable',
+    stat_reserved: 'Reserved',
+    stat_sleeves: 'Sleeves',
+    stat_seedlings: 'Seedlings',
+    stat_tasks: 'Tasks',
+    // Entry modal
+    modal_add_entry: 'Add Variety Entry',
+    modal_edit_entry: 'Edit Variety Entry',
+    lbl_type: 'Type',
+    type_grafted: 'Grafted Tree (default)',
+    type_seedling: 'Seedling (rootstock only, not grafted yet)',
+    type_sleeve: 'Sleeve (empty, awaiting seedling)',
+    lbl_placement: 'Placement (Row in House)',
+    opt_row: '— Row —',
+    opt_sub: '— Sub (optional) —',
+    lbl_scion: 'Scion / Variety',
+    opt_select_scion: '— Select scion —',
+    opt_none_rootstock: 'None (rootstock only)',
+    lbl_rootstock: 'Rootstock',
+    opt_select_rootstock: '— Select rootstock —',
+    opt_none: 'None',
+    lbl_transplant: 'Transplant / Notes',
+    ph_optional_notes: 'Optional notes',
+    lbl_quantity: 'Quantity',
+    ph_qty_example: 'e.g. 5000',
+    lbl_take_rate: 'Take Rate %',
+    lbl_graft_date: 'Graft Date',
+    lbl_shipment_year: 'Shipment Year',
+    ph_year_example: 'e.g. 2026',
+    btn_cancel: 'Cancel',
+    btn_save_entry: 'Save Entry',
+    // Task modal
+    lbl_task: 'Task',
+    ph_task_description: 'Task description...',
+    quick_tasks_label: 'Quick tasks:',
+    qt_bud: '🌱 Bud',
+    qt_graft: '🔪 Graft',
+    qt_stake: '📏 Stake',
+    qt_fertilize: '💧 Fertilize',
+    qt_spray: '🧪 Spray',
+    qt_count: '🔢 Count',
+    qt_prune: '✂️ Prune',
+    qt_pull: '📦 Pull',
+    qt_inspect: '🔍 Inspect',
+    lbl_scheduled_date: 'Scheduled Date (optional)',
+    lbl_assignee: 'Assignee (optional)',
+    ph_assignee: 'e.g. Abram',
+    btn_save_task: 'Save Task',
+    btn_save_wa: 'Save & Send WhatsApp',
+    // Badges
+    badge_seedling: 'SEEDLING',
+    badge_sleeve: 'SLEEVE',
+    label_empty_sleeves: 'Empty Sleeves',
+    label_seedling_short: 'seedling',
+    // Empty states
+    sub_empty: 'Empty',
+    no_history: 'No history yet for this section',
+    no_tasks_section: 'No varieties planted in this house',
+    active_tasks: 'Active Tasks',
+    // Validation alerts
+    alert_qty_sleeves: 'Please enter the quantity of empty sleeves.',
+    alert_select_rootstock: 'Please select a rootstock for the seedling.',
+    alert_qty_seedlings: 'Please enter the quantity of seedlings.',
+    alert_min_entry: 'Please enter at least a scion, rootstock, or quantity.',
+    alert_task_desc: 'Please enter a task description.',
+    alert_house_not_found: 'House not found. Try H1-North1, H2-South5, etc.',
+    // Backup / Restore alerts
+    alert_backup_done: 'Backup downloaded.',
+    alert_backup_failed: 'Backup failed: ',
+    alert_cloud_required: 'Cloud not connected. Restore requires Supabase access.',
+    alert_no_sections: 'Backup file has no sections.',
+    confirm_restore: 'Restore {n} sections from backup?\n\nThis will OVERWRITE existing inventory entries for any section in the backup. Sections not in the backup will be unaffected.\n\nContinue?',
+    alert_restore_done: 'Restore complete.',
+    alert_restore_failed: 'Restore failed: ',
+    alert_cloud_task_complete: 'Cloud not connected — cannot mark task complete right now.',
+    alert_task_not_found: 'This task could not be found. It may have been deleted.',
+    alert_task_already_complete: 'This task was already marked complete on ',
+    alert_task_removed: 'This task was removed.',
+    confirm_delete_entry: 'Remove this variety entry?',
+    confirm_delete_task: 'Delete this task?',
+    // Sheet view
+    sheet_filter_ph: 'Filter rows...',
+    sheet_saving: '● Saving...',
+    sheet_saved: '✓ All changes saved',
+    sheet_ready: 'Ready · Click any cell to edit',
+    th_house: 'House',
+    th_subhouse: 'Sub-house',
+    th_type: 'Type',
+    th_scion: 'Scion',
+    th_rootstock: 'Rootstock',
+    th_notes: 'Notes',
+    th_reserved: 'Reserved',
+    th_graft_date: 'Graft Date',
+    th_ship_yr: 'Ship Yr',
+    // Misc
+    open_section: 'Open section',
+    sections: 'sections',
+    trees: 'trees',
+    restored: 'Restored',
+    failed: 'Failed',
+    reloading: 'Reloading data...',
+  },
+  es: {
+    // Header
+    app_title: 'M&G Vivero',
+    app_subtitle: 'Rastreador de Casa e Inventario',
+    btn_backup: '↓ Respaldo',
+    btn_restore: '↑ Restaurar',
+    btn_report: '📄 Reporte',
+    search_placeholder: 'Buscar variedad, portainjerto, casa...',
+    // View tabs
+    view_list: '📋 Lista',
+    view_map: '🗺️ Mapa',
+    view_sheet: '📊 Hoja',
+    view_tasks: '✓ Tareas',
+    // Stat pills
+    stat_active: 'Activas',
+    stat_planted: 'Plantado',
+    stat_sellable: 'Vendible',
+    stat_reserved: 'Reservado',
+    stat_sleeves: 'Bolsas',
+    stat_seedlings: 'Plantulas',
+    stat_tasks: 'Tareas',
+    // Entry modal
+    modal_add_entry: 'Agregar Variedad',
+    modal_edit_entry: 'Editar Variedad',
+    lbl_type: 'Tipo',
+    type_grafted: 'Arbol Injertado (predeterminado)',
+    type_seedling: 'Plantula (solo portainjerto, sin injertar)',
+    type_sleeve: 'Bolsa (vacia, esperando plantula)',
+    lbl_placement: 'Ubicacion (Fila en la Casa)',
+    opt_row: '— Fila —',
+    opt_sub: '— Sub (opcional) —',
+    lbl_scion: 'Injerto / Variedad',
+    opt_select_scion: '— Seleccionar injerto —',
+    opt_none_rootstock: 'Ninguno (solo portainjerto)',
+    lbl_rootstock: 'Portainjerto',
+    opt_select_rootstock: '— Seleccionar portainjerto —',
+    opt_none: 'Ninguno',
+    lbl_transplant: 'Trasplante / Notas',
+    ph_optional_notes: 'Notas opcionales',
+    lbl_quantity: 'Cantidad',
+    ph_qty_example: 'ej. 5000',
+    lbl_take_rate: 'Tasa de Prendimiento %',
+    lbl_graft_date: 'Fecha de Injerto',
+    lbl_shipment_year: 'Ano de Envio',
+    ph_year_example: 'ej. 2026',
+    btn_cancel: 'Cancelar',
+    btn_save_entry: 'Guardar Variedad',
+    // Task modal
+    lbl_task: 'Tarea',
+    ph_task_description: 'Descripcion de la tarea...',
+    quick_tasks_label: 'Tareas rapidas:',
+    qt_bud: '🌱 Yema',
+    qt_graft: '🔪 Injertar',
+    qt_stake: '📏 Estacar',
+    qt_fertilize: '💧 Fertilizar',
+    qt_spray: '🧪 Fumigar',
+    qt_count: '🔢 Contar',
+    qt_prune: '✂️ Podar',
+    qt_pull: '📦 Sacar',
+    qt_inspect: '🔍 Inspeccionar',
+    lbl_scheduled_date: 'Fecha Programada (opcional)',
+    lbl_assignee: 'Asignado a (opcional)',
+    ph_assignee: 'ej. Abram',
+    btn_save_task: 'Guardar Tarea',
+    btn_save_wa: 'Guardar y Enviar WhatsApp',
+    // Badges
+    badge_seedling: 'PLANTULA',
+    badge_sleeve: 'BOLSA',
+    label_empty_sleeves: 'Bolsas Vacias',
+    label_seedling_short: 'plantula',
+    // Empty states
+    sub_empty: 'Vacia',
+    no_history: 'Aun no hay historial para esta seccion',
+    no_tasks_section: 'No hay variedades plantadas en esta casa',
+    active_tasks: 'Tareas Activas',
+    // Validation alerts
+    alert_qty_sleeves: 'Por favor ingrese la cantidad de bolsas vacias.',
+    alert_select_rootstock: 'Por favor seleccione un portainjerto para la plantula.',
+    alert_qty_seedlings: 'Por favor ingrese la cantidad de plantulas.',
+    alert_min_entry: 'Por favor ingrese al menos un injerto, portainjerto, o cantidad.',
+    alert_task_desc: 'Por favor ingrese una descripcion de la tarea.',
+    alert_house_not_found: 'Casa no encontrada. Intente H1-North1, H2-South5, etc.',
+    // Backup / Restore alerts
+    alert_backup_done: 'Respaldo descargado.',
+    alert_backup_failed: 'Error al respaldar: ',
+    alert_cloud_required: 'Nube no conectada. Restaurar requiere acceso a Supabase.',
+    alert_no_sections: 'El archivo de respaldo no tiene secciones.',
+    confirm_restore: '¿Restaurar {n} secciones del respaldo?\n\nEsto SOBRESCRIBIRA las variedades existentes en cualquier seccion del respaldo. Las secciones que no esten en el respaldo no se veran afectadas.\n\n¿Continuar?',
+    alert_restore_done: 'Restauracion completada.',
+    alert_restore_failed: 'Error al restaurar: ',
+    alert_cloud_task_complete: 'Nube no conectada — no se puede marcar tarea como completada en este momento.',
+    alert_task_not_found: 'No se encontro esta tarea. Es posible que haya sido eliminada.',
+    alert_task_already_complete: 'Esta tarea ya fue marcada como completada el ',
+    alert_task_removed: 'Esta tarea fue eliminada.',
+    confirm_delete_entry: '¿Eliminar esta variedad?',
+    confirm_delete_task: '¿Eliminar esta tarea?',
+    // Sheet view
+    sheet_filter_ph: 'Filtrar filas...',
+    sheet_saving: '● Guardando...',
+    sheet_saved: '✓ Todos los cambios guardados',
+    sheet_ready: 'Listo · Haga clic en cualquier celda para editar',
+    th_house: 'Casa',
+    th_subhouse: 'Sub-casa',
+    th_type: 'Tipo',
+    th_scion: 'Injerto',
+    th_rootstock: 'Portainjerto',
+    th_notes: 'Notas',
+    th_reserved: 'Reservado',
+    th_graft_date: 'Fecha Injerto',
+    th_ship_yr: 'Ano Envio',
+    // Misc
+    open_section: 'Abrir seccion',
+    sections: 'secciones',
+    trees: 'arboles',
+    restored: 'Restaurado',
+    failed: 'Falla',
+    reloading: 'Recargando datos...',
+  }
+};
+
+function t(key) {
+  return (T_DICT[lang] && T_DICT[lang][key]) || T_DICT.en[key] || key;
+}
+
+// Display-only translators for house/subhouse strings.
+// IMPORTANT: These NEVER touch saved data. The Supabase column always stays "House 1" / "North 1".
+// We only swap labels at render time so the Spanish-speaking manager sees "Casa 1" / "Norte 1".
+function tHouse(houseStr) {
+  if (lang !== 'es' || !houseStr) return houseStr || '';
+  // Replace 'House' with 'Casa' but preserve trailing number ("House 1" -> "Casa 1")
+  return houseStr.replace(/\bHouse\b/g, 'Casa');
+}
+
+function tSubhouse(subhouseStr) {
+  if (lang !== 'es' || !subhouseStr) return subhouseStr || '';
+  // Translate cardinal directions only, preserve trailing number ("North 1" -> "Norte 1")
+  return subhouseStr
+    .replace(/\bNorth\b/g, 'Norte')
+    .replace(/\bSouth\b/g, 'Sur')
+    .replace(/\bEast\b/g, 'Este')
+    .replace(/\bWest\b/g, 'Oeste');
+}
+
+function setLang(l) {
+  lang = l;
+  try { localStorage.setItem('mg_nursery_lang', l); } catch(e) {}
+  // Update toggle button states
+  const en = document.getElementById('btn-lang-en');
+  const es = document.getElementById('btn-lang-es');
+  if (en) en.classList.toggle('active', l === 'en');
+  if (es) es.classList.toggle('active', l === 'es');
+  // Re-render everything that uses translations
+  applyStaticTranslations();
+  if (typeof renderStats === 'function') renderStats();
+  if (currentSectionId && typeof openSection === 'function') openSection(currentSectionId);
+  else if (typeof renderHome === 'function') renderHome();
+}
+
+// Applies translations to elements with data-i18n attributes + select-options
+function applyStaticTranslations() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    el.textContent = t(key);
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+    const key = el.getAttribute('data-i18n-ph');
+    el.setAttribute('placeholder', t(key));
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    const key = el.getAttribute('data-i18n-title');
+    el.setAttribute('title', t(key));
+  });
+}
+// ─── END I18N ────────────────────────────────────────────────────────────────
+
+
 const SB_URL = 'https://nlfovnxjzyfircvpgsrz.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5sZm92bnhqenlmaXJjdnBnc3J6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1ODI2MzMsImV4cCI6MjA5MzE1ODYzM30.fu5Hh-HSdVJhD_OkUBlEvPs8q1AW2c1iznsFcWZUc9Q';
 
@@ -1571,13 +1881,13 @@ function calcStats() {
 function renderStats() {
   const s = calcStats();
   document.getElementById('stats-bar').innerHTML =
-    '<div class="stat-pill"><div class="stat-num">' + s.active + '/56</div><div class="stat-lbl">Active</div></div>' +
-    '<div class="stat-pill"><div class="stat-num">' + s.totalQty.toLocaleString() + '</div><div class="stat-lbl">Planted</div></div>' +
-    '<div class="stat-pill"><div class="stat-num">' + s.sellable.toLocaleString() + '</div><div class="stat-lbl">Sellable</div></div>' +
-    '<div class="stat-pill"><div class="stat-num">' + s.reserved.toLocaleString() + '</div><div class="stat-lbl">Reserved</div></div>' +
-    '<div class="stat-pill" style="background:#FEF3C7;border-color:#FDE68A;"><div class="stat-num" style="color:#92400E">' + s.sleeves.toLocaleString() + '</div><div class="stat-lbl">Sleeves</div></div>' +
-    '<div class="stat-pill" style="background:#DBEAFE;border-color:#BFDBFE;"><div class="stat-num" style="color:#1E40AF">' + s.seedlings.toLocaleString() + '</div><div class="stat-lbl">Seedlings</div></div>' +
-    '<div class="stat-pill"><div class="stat-num">' + s.tasks + '</div><div class="stat-lbl">Tasks</div></div>';
+    '<div class="stat-pill"><div class="stat-num">' + s.active + '/56</div><div class="stat-lbl">' + t('stat_active') + '</div></div>' +
+    '<div class="stat-pill"><div class="stat-num">' + s.totalQty.toLocaleString() + '</div><div class="stat-lbl">' + t('stat_planted') + '</div></div>' +
+    '<div class="stat-pill"><div class="stat-num">' + s.sellable.toLocaleString() + '</div><div class="stat-lbl">' + t('stat_sellable') + '</div></div>' +
+    '<div class="stat-pill"><div class="stat-num">' + s.reserved.toLocaleString() + '</div><div class="stat-lbl">' + t('stat_reserved') + '</div></div>' +
+    '<div class="stat-pill" style="background:#FEF3C7;border-color:#FDE68A;"><div class="stat-num" style="color:#92400E">' + s.sleeves.toLocaleString() + '</div><div class="stat-lbl">' + t('stat_sleeves') + '</div></div>' +
+    '<div class="stat-pill" style="background:#DBEAFE;border-color:#BFDBFE;"><div class="stat-num" style="color:#1E40AF">' + s.seedlings.toLocaleString() + '</div><div class="stat-lbl">' + t('stat_seedlings') + '</div></div>' +
+    '<div class="stat-pill"><div class="stat-num">' + s.tasks + '</div><div class="stat-lbl">' + t('stat_tasks') + '</div></div>';
 }
 
 function setView(view) {
@@ -1664,7 +1974,7 @@ function _flattenAllTasks() {
       const cloudRow = _nurseryTaskRows.find(r => r.section_id === s.id && r.task === label);
       out.push({
         section_id: s.id,
-        sectionLabel: s.house + ' · ' + s.subhouse,
+        sectionLabel: tHouse(s.house) + ' · ' + tSubhouse(s.subhouse),
         sectionType: s.sectionType,
         task: label,
         date: date || (cloudRow ? cloudRow.scheduled_date : '') || '',
@@ -1804,18 +2114,20 @@ function sendTaskWAFromList(sectionId, encodedTask, date, assignee, rowId) {
   const taskLabel = decodeURIComponent(encodedTask);
   const s = SECTIONS[sectionId];
   if (!s) return;
-  const sectionLabel = s.house + ' ' + s.subhouse + ' (' + s.sectionType + ')';
-  const dateStr = date ? '\nDate: ' + date : '';
-  const assigneeStr = assignee ? '\nFor: ' + assignee : '';
+  const sectionLabel = tHouse(s.house) + ' ' + tSubhouse(s.subhouse) + ' (' + s.sectionType + ')';
+  const dateStr = date ? '\n' + (lang === 'es' ? 'Fecha' : 'Date') + ': ' + date : '';
+  const assigneeStr = assignee ? '\n' + (lang === 'es' ? 'Para' : 'For') + ': ' + assignee : '';
   // If we have the cloud rowId, build a one-tap complete link. Otherwise just a section link.
   const baseUrl = window.location.origin;
   const url = rowId
     ? baseUrl + '#section=' + encodeURIComponent(sectionId) + '&complete=' + rowId
     : baseUrl + '#section=' + encodeURIComponent(sectionId);
-  const linkLabel = rowId ? 'Tap to mark complete when done:' : 'Open in app:';
-  const msg = 'M&G Nursery — Task\n' +
-              'Section: ' + sectionLabel + '\n' +
-              'Task: ' + taskLabel + dateStr + assigneeStr + '\n\n' +
+  const linkLabel = rowId
+    ? (lang === 'es' ? 'Toque para marcar como completada cuando termine:' : 'Tap to mark complete when done:')
+    : (lang === 'es' ? 'Abrir en la app:' : 'Open in app:');
+  const msg = (lang === 'es' ? 'M&G Vivero — Tarea\n' : 'M&G Nursery — Task\n') +
+              (lang === 'es' ? 'Seccion' : 'Section') + ': ' + sectionLabel + '\n' +
+              (lang === 'es' ? 'Tarea' : 'Task') + ': ' + taskLabel + dateStr + assigneeStr + '\n\n' +
               linkLabel + '\n' + url;
   window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
 }
@@ -1846,8 +2158,8 @@ function _entryType(e) {
 }
 
 function _typeBadge(type) {
-  if (type === 'Sleeve') return '<span style="display:inline-block;background:#FEF3C7;color:#92400E;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;margin-left:4px;letter-spacing:.04em;text-transform:uppercase">SLEEVE</span>';
-  if (type === 'Seedling') return '<span style="display:inline-block;background:#DBEAFE;color:#1E40AF;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;margin-left:4px;letter-spacing:.04em;text-transform:uppercase">SEEDLING</span>';
+  if (type === 'Sleeve') return '<span style="display:inline-block;background:#FEF3C7;color:#92400E;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;margin-left:4px;letter-spacing:.04em;text-transform:uppercase">' + t('badge_sleeve') + '</span>';
+  if (type === 'Seedling') return '<span style="display:inline-block;background:#DBEAFE;color:#1E40AF;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;margin-left:4px;letter-spacing:.04em;text-transform:uppercase">' + t('badge_seedling') + '</span>';
   return '';  // Grafted Tree = no badge (it's the default)
 }
 
@@ -1860,12 +2172,12 @@ function buildCard(s) {
   const visible = entries.slice(0, 3);
   const more = entries.length - 3;
   const varHtml = isEmpty
-    ? '<div class="sub-empty">Empty</div>'
+    ? '<div class="sub-empty">' + t('sub_empty') + '</div>'
     : visible.map(e => {
         const et = _entryType(e);
         let label;
-        if (et === 'Sleeve') label = '<strong>Empty Sleeves</strong>';
-        else if (et === 'Seedling') label = '<strong>' + (e.rootstock || '—') + ' seedling</strong>';
+        if (et === 'Sleeve') label = '<strong>' + t('label_empty_sleeves') + '</strong>';
+        else if (et === 'Seedling') label = '<strong>' + (e.rootstock || '—') + ' ' + t('label_seedling_short') + '</strong>';
         else label = '<strong>' + (e.scion || '—') + '</strong>' + (e.rootstock ? ' / ' + e.rootstock : '');
         return '<div class="sub-variety-row">' + label + _typeBadge(et) + ' · ' + (e.quantity || 0).toLocaleString() + '</div>';
       }).join('') +
@@ -1877,10 +2189,10 @@ function buildCard(s) {
   return '<div class="sub-card" style="position:relative" onclick="openSection(\'' + s.id + '\')">' +
     '<div class="sub-status ' + statusClass + '"></div>' +
     taskBadge +
-    '<div class="sub-id">' + s.house + ' · ' + s.subhouse + '</div>' +
+    '<div class="sub-id">' + tHouse(s.house) + ' · ' + tSubhouse(s.subhouse) + '</div>' +
     '<div class="sub-type">' + s.sectionType + '</div>' +
     '<div class="sub-varieties">' + varHtml + '</div>' +
-    (totalQty > 0 ? '<div class="sub-totals"><span>' + totalQty.toLocaleString() + ' trees</span><span>' + sellable.toLocaleString() + ' sellable</span></div>' : '') +
+    (totalQty > 0 ? '<div class="sub-totals"><span>' + totalQty.toLocaleString() + ' ' + t('trees') + '</span><span>' + sellable.toLocaleString() + ' ' + t('stat_sellable').toLowerCase() + '</span></div>' : '') +
   '</div>';
 }
 
@@ -1898,22 +2210,22 @@ function renderMapView(filtered) {
     return html;
   }
   const legend = '<div class="map-legend">' +
-    '<div class="leg-item"><div class="leg-dot" style="background:var(--purple)"></div>Increase / Budwood</div>' +
-    '<div class="leg-item"><div class="leg-dot" style="background:#0EA5E9"></div>Seedling House</div>' +
-    '<div class="leg-item"><div class="leg-dot" style="background:var(--g600)"></div>Tree House (Active)</div>' +
-    '<div class="leg-item"><div class="leg-dot" style="background:var(--g50);border:1px solid var(--g300)"></div>Empty</div>' +
+    '<div class="leg-item"><div class="leg-dot" style="background:var(--purple)"></div>' + (lang === 'es' ? 'Aumento / Yemera' : 'Increase / Budwood') + '</div>' +
+    '<div class="leg-item"><div class="leg-dot" style="background:#0EA5E9"></div>' + (lang === 'es' ? 'Casa de Plantulas' : 'Seedling House') + '</div>' +
+    '<div class="leg-item"><div class="leg-dot" style="background:var(--g600)"></div>' + (lang === 'es' ? 'Casa de Arboles (Activa)' : 'Tree House (Active)') + '</div>' +
+    '<div class="leg-item"><div class="leg-dot" style="background:var(--g50);border:1px solid var(--g300)"></div>' + t('sub_empty') + '</div>' +
   '</div>';
   return '<div class="map-wrap">' +
-    '<div class="map-title">House 1</div>' +
-    '<div class="map-meta">16 sub-houses · N1-N2 + S1-S2 are Increase Tree Houses, rest are Tree Houses</div>' +
-    '<div class="map-row-label">NORTH SIDE</div>' + buildGrid('H1', 'North', 8, 'h1-grid') +
-    '<div class="map-row-label" style="margin-top:6px">SOUTH SIDE</div>' + buildGrid('H1', 'South', 8, 'h1-grid') +
+    '<div class="map-title">' + tHouse('House 1') + '</div>' +
+    '<div class="map-meta">' + (lang === 'es' ? '16 sub-casas · N1-N2 + S1-S2 son Casas de Aumento, el resto son Casas de Arboles' : '16 sub-houses · N1-N2 + S1-S2 are Increase Tree Houses, rest are Tree Houses') + '</div>' +
+    '<div class="map-row-label">' + (lang === 'es' ? 'LADO NORTE' : 'NORTH SIDE') + '</div>' + buildGrid('H1', 'North', 8, 'h1-grid') +
+    '<div class="map-row-label" style="margin-top:6px">' + (lang === 'es' ? 'LADO SUR' : 'SOUTH SIDE') + '</div>' + buildGrid('H1', 'South', 8, 'h1-grid') +
   '</div>' +
   '<div class="map-wrap">' +
-    '<div class="map-title">House 2</div>' +
-    '<div class="map-meta">40 sub-houses · N1-N2 + S1-S2 are Seedling Houses, rest are Tree Houses · Scroll →</div>' +
-    '<div class="map-row-label">NORTH SIDE</div>' + buildGrid('H2', 'North', 20, 'h2-grid') +
-    '<div class="map-row-label" style="margin-top:6px">SOUTH SIDE</div>' + buildGrid('H2', 'South', 20, 'h2-grid') +
+    '<div class="map-title">' + tHouse('House 2') + '</div>' +
+    '<div class="map-meta">' + (lang === 'es' ? '40 sub-casas · N1-N2 + S1-S2 son Casas de Plantulas, el resto son Casas de Arboles · Deslice →' : '40 sub-houses · N1-N2 + S1-S2 are Seedling Houses, rest are Tree Houses · Scroll →') + '</div>' +
+    '<div class="map-row-label">' + (lang === 'es' ? 'LADO NORTE' : 'NORTH SIDE') + '</div>' + buildGrid('H2', 'North', 20, 'h2-grid') +
+    '<div class="map-row-label" style="margin-top:6px">' + (lang === 'es' ? 'LADO SUR' : 'SOUTH SIDE') + '</div>' + buildGrid('H2', 'South', 20, 'h2-grid') +
     legend +
   '</div>';
 }
@@ -1973,8 +2285,8 @@ function renderSheetView(filteredSections) {
     const rootSel = ROOTSTOCK_OPTIONS.map(v => '<option value="' + v + '"' + (v === (e.rootstock || '') ? ' selected' : '') + '>' + (v || '— Rootstock —') + '</option>').join('');
 
     return '<tr class="' + cls(s) + '" data-k="' + k + '">' +
-      '<td class="cell-label">' + s.house + '</td>' +
-      '<td class="cell-sub">' + s.subhouse + '</td>' +
+      '<td class="cell-label">' + tHouse(s.house) + '</td>' +
+      '<td class="cell-sub">' + tSubhouse(s.subhouse) + '</td>' +
       '<td class="cell-type">' + s.sectionType + '</td>' +
       '<td><select class="cell-input" onchange="updateEntry(\'' + s.id + '\',' + idx + ',\'scion\',this.value)">' + scionSel + '</select></td>' +
       '<td><select class="cell-input" onchange="updateEntry(\'' + s.id + '\',' + idx + ',\'rootstock\',this.value)">' + rootSel + '</select></td>' +
@@ -2098,7 +2410,7 @@ function addSheetRow() {
   const houseId = prompt('Add to which house? (e.g. H1-North3 or H2-South5)\n\nFormat: H1-North1 through H1-South8, or H2-North1 through H2-South20');
   if (!houseId) return;
   const s = SECTIONS[houseId.trim()];
-  if (!s) { alert('House not found. Try H1-North1, H2-South5, etc.'); return; }
+  if (!s) { alert(t('alert_house_not_found')); return; }
   s.entries.push({ scion:'', rootstock:'', transplant:'', quantity:0, takeRate:85, graftDate:'', shipmentYear:'', reservedQty:0 });
   saveSectionToCloud(s);
   renderHome();
@@ -2156,7 +2468,7 @@ function buildMapCell(s, faded) {
   const variety = top ? (top.scion || top.rootstock || '') : '';
   const shortVar = variety.length > 9 ? variety.substring(0, 8) + '…' : variety;
   const fade = faded ? 'opacity:.25' : '';
-  const tip = s.house + ' ' + s.subhouse + (variety ? ' — ' + variety : '') + (entries.length > 1 ? ' (+' + (entries.length - 1) + ')' : '');
+  const tip = tHouse(s.house) + ' ' + tSubhouse(s.subhouse) + (variety ? ' — ' + variety : '') + (entries.length > 1 ? ' (+' + (entries.length - 1) + ')' : '');
   return '<div class="map-cell ' + cls + '" style="' + fade + '" onclick="openSection(\'' + s.id + '\')" title="' + tip + '">' +
     '<div class="map-cell-num">' + s.sectionIdx + '</div>' +
     (variety ? '<div class="map-cell-var">' + shortVar + '</div>' : '') +
@@ -2267,8 +2579,8 @@ function openSection(sectionId) {
         if (e.shipmentYear) meta.push('Ship: ' + e.shipmentYear);
         // Label varies by type
         let scionLabel;
-        if (et === 'Sleeve') scionLabel = '<em style="color:#92400E">Empty Sleeves</em>';
-        else if (et === 'Seedling') scionLabel = '<em style="color:#1E40AF">Seedling</em>';
+        if (et === 'Sleeve') scionLabel = '<em style="color:#92400E">' + t('label_empty_sleeves') + '</em>';
+        else if (et === 'Seedling') scionLabel = '<em style="color:#1E40AF">' + t('badge_seedling').charAt(0) + t('badge_seedling').slice(1).toLowerCase() + '</em>';
         else scionLabel = e.scion || '—';
         return '<div class="entry-row" onclick="editEntry(' + i + ')">' +
           '<div><div class="entry-scion">' + scionLabel + _typeBadge(et) + '</div>' + (meta.length ? '<div class="entry-meta">' + meta.join(' · ') + '</div>' : '') + '</div>' +
@@ -2292,34 +2604,34 @@ function openSection(sectionId) {
 
   detail.innerHTML =
     '<div class="detail-hero">' +
-      '<button class="detail-back" onclick="goHome()">&larr; All Houses</button>' +
-      '<div class="detail-id">' + s.house + ' · ' + s.id + '</div>' +
-      '<div class="detail-name">' + s.subhouse + '</div>' +
-      '<div class="detail-sub">' + s.sectionType + ' · ' + entries.length + ' variet' + (entries.length === 1 ? 'y' : 'ies') + '</div>' +
+      '<button class="detail-back" onclick="goHome()">&larr; ' + (lang === 'es' ? 'Todas las Casas' : 'All Houses') + '</button>' +
+      '<div class="detail-id">' + tHouse(s.house) + ' · ' + s.id + '</div>' +
+      '<div class="detail-name">' + tSubhouse(s.subhouse) + '</div>' +
+      '<div class="detail-sub">' + s.sectionType + ' · ' + entries.length + ' ' + (lang === 'es' ? (entries.length === 1 ? 'variedad' : 'variedades') : (entries.length === 1 ? 'variety' : 'varieties')) + '</div>' +
       '<div class="detail-tags">' +
         '<div class="detail-tag">🌳 ' + s.sectionType + '</div>' +
-        '<div class="detail-tag">📍 ' + s.side + ' side, position ' + s.sectionIdx + '</div>' +
-        (totalQty > 0 ? '<div class="detail-tag">' + totalQty.toLocaleString() + ' trees</div>' : '') +
-        (totalSellable > 0 ? '<div class="detail-tag">' + totalSellable.toLocaleString() + ' sellable</div>' : '') +
+        '<div class="detail-tag">📍 ' + (lang === 'es' ? (s.side === 'North' ? 'Norte' : s.side === 'South' ? 'Sur' : s.side === 'East' ? 'Este' : s.side === 'West' ? 'Oeste' : s.side) + ', posicion ' : s.side + ' side, position ') + s.sectionIdx + '</div>' +
+        (totalQty > 0 ? '<div class="detail-tag">' + totalQty.toLocaleString() + ' ' + t('trees') + '</div>' : '') +
+        (totalSellable > 0 ? '<div class="detail-tag">' + totalSellable.toLocaleString() + ' ' + t('stat_sellable').toLowerCase() + '</div>' : '') +
       '</div>' +
     '</div>' +
     '<div class="detail-body">' +
-      '<div class="section-title"><span>Variety Inventory (' + entries.length + ')</span>' +
-        (totalReserved > 0 ? '<span style="font-weight:600;color:var(--g700);text-transform:none">' + totalReserved.toLocaleString() + ' reserved</span>' : '') +
+      '<div class="section-title"><span>' + (lang === 'es' ? 'Inventario de Variedades' : 'Variety Inventory') + ' (' + entries.length + ')</span>' +
+        (totalReserved > 0 ? '<span style="font-weight:600;color:var(--g700);text-transform:none">' + totalReserved.toLocaleString() + ' ' + t('stat_reserved').toLowerCase() + '</span>' : '') +
       '</div>' +
       entriesHtml +
-      '<button class="add-entry-btn" onclick="addEntry()">+ Add Variety Entry</button>' +
+      '<button class="add-entry-btn" onclick="addEntry()">+ ' + (lang === 'es' ? 'Agregar Variedad' : 'Add Variety Entry') + '</button>' +
       '<div style="margin-top:24px">' +
-        '<div class="section-title"><span>Active Tasks (' + activeTasks.length + ')</span></div>' +
-        (tasksHtml ? '<div class="tasks-list">' + tasksHtml + '</div>' : '<div class="no-tasks">No active tasks for this house</div>') +
+        '<div class="section-title"><span>' + t('active_tasks') + ' (' + activeTasks.length + ')</span></div>' +
+        (tasksHtml ? '<div class="tasks-list">' + tasksHtml + '</div>' : '<div class="no-tasks">' + (lang === 'es' ? 'No hay tareas activas para esta casa' : 'No active tasks for this house') + '</div>') +
       '</div>' +
       '<div style="margin-top:24px">' +
-        '<div class="section-title"><span>History</span></div>' +
-        '<div id="section-history-content"><div style="padding:14px 12px;color:#9CA3AF;font-size:13px;text-align:center">Loading…</div></div>' +
+        '<div class="section-title"><span>' + (lang === 'es' ? 'Historial' : 'History') + '</span></div>' +
+        '<div id="section-history-content"><div style="padding:14px 12px;color:#9CA3AF;font-size:13px;text-align:center">' + (lang === 'es' ? 'Cargando...' : 'Loading…') + '</div></div>' +
       '</div>' +
       '<div class="action-bar">' +
-        '<button class="btn-primary" onclick="addEntry()">🌱 Add Variety</button>' +
-        '<button class="btn-secondary" onclick="openTaskModal()">📋 Add Task</button>' +
+        '<button class="btn-primary" onclick="addEntry()">🌱 ' + (lang === 'es' ? 'Agregar Variedad' : 'Add Variety') + '</button>' +
+        '<button class="btn-secondary" onclick="openTaskModal()">📋 ' + (lang === 'es' ? 'Agregar Tarea' : 'Add Task') + '</button>' +
       '</div>' +
     '</div>';
 
@@ -2337,8 +2649,8 @@ function addEntry() {
   currentEntryIdx = null;
   const s = SECTIONS[currentSectionId];
   if (!s) return;
-  document.getElementById('entry-modal-title').textContent = 'Add Variety Entry';
-  document.getElementById('entry-modal-section').textContent = s.house + ' · ' + s.subhouse + ' · ' + s.sectionType;
+  document.getElementById('entry-modal-title').textContent = t('modal_add_entry');
+  document.getElementById('entry-modal-section').textContent = tHouse(s.house) + ' · ' + tSubhouse(s.subhouse) + ' · ' + s.sectionType;
   ['entry-scion','entry-rootstock','entry-transplant','entry-qty','entry-graft','entry-shipment','entry-row','entry-rowsub'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('entry-takerate').value = 85;
   document.getElementById('entry-type').value = 'Grafted Tree';
@@ -2351,8 +2663,8 @@ function editEntry(idx) {
   if (!s) return;
   const e = s.entries[idx];
   if (!e) return;
-  document.getElementById('entry-modal-title').textContent = 'Edit Variety Entry';
-  document.getElementById('entry-modal-section').textContent = s.house + ' · ' + s.subhouse;
+  document.getElementById('entry-modal-title').textContent = t('modal_edit_entry');
+  document.getElementById('entry-modal-section').textContent = tHouse(s.house) + ' · ' + tSubhouse(s.subhouse);
   // Backward-compat: infer type from existing data if not set
   // Has scion + rootstock = Grafted Tree (current default behavior, preserves existing data)
   // Has rootstock, no scion = Seedling
@@ -2408,13 +2720,13 @@ async function saveEntry() {
   }
   // Validate per-type
   if (entry.type === 'Sleeve') {
-    if (!entry.quantity) { alert('Please enter the quantity of empty sleeves.'); return; }
+    if (!entry.quantity) { alert(t('alert_qty_sleeves')); return; }
   } else if (entry.type === 'Seedling') {
-    if (!entry.rootstock) { alert('Please select a rootstock for the seedling.'); return; }
-    if (!entry.quantity) { alert('Please enter the quantity of seedlings.'); return; }
+    if (!entry.rootstock) { alert(t('alert_select_rootstock')); return; }
+    if (!entry.quantity) { alert(t('alert_qty_seedlings')); return; }
   } else {
     if (!entry.scion && !entry.rootstock && !entry.quantity) {
-      alert('Please enter at least a scion, rootstock, or quantity.');
+      alert(t('alert_min_entry'));
       return;
     }
   }
@@ -2426,7 +2738,7 @@ async function saveEntry() {
 }
 
 async function deleteEntry(idx) {
-  if (!confirm('Remove this variety entry?')) return;
+  if (!confirm(t('confirm_delete_entry'))) return;
   const s = SECTIONS[currentSectionId];
   if (!s) return;
   s.entries.splice(idx, 1);
@@ -2437,7 +2749,7 @@ async function deleteEntry(idx) {
 function openTaskModal() {
   const s = SECTIONS[currentSectionId];
   if (!s) return;
-  document.getElementById('task-modal-section').textContent = s.house + ' · ' + s.subhouse;
+  document.getElementById('task-modal-section').textContent = tHouse(s.house) + ' · ' + tSubhouse(s.subhouse);
   document.getElementById('task-input').value = '';
   document.getElementById('task-date').value = '';
   document.getElementById('task-assignee').value = '';
@@ -2481,7 +2793,7 @@ async function _saveTaskToCloudWithId(taskId, sectionId, task, date, assignee) {
 
 async function _submitTaskCore(sendWhatsApp) {
   const task = document.getElementById('task-input').value.trim();
-  if (!task) { alert('Please enter a task description.'); return; }
+  if (!task) { alert(t('alert_task_desc')); return; }
   const date = document.getElementById('task-date').value;
   const assignee = document.getElementById('task-assignee').value.trim();
   const s = SECTIONS[currentSectionId];
@@ -2495,15 +2807,15 @@ async function _submitTaskCore(sendWhatsApp) {
   // STEP 1: If sending WhatsApp, OPEN THE LINK FIRST while we still have a valid user gesture.
   // Use the pre-generated taskId so the recipient can one-tap to complete.
   if (sendWhatsApp) {
-    const sectionLabel = s.house + ' ' + s.subhouse + ' (' + s.sectionType + ')';
-    const dateStr = date ? '\nDate: ' + date : '';
-    const assigneeStr = assignee ? '\nFor: ' + assignee : '';
+    const sectionLabel = tHouse(s.house) + ' ' + tSubhouse(s.subhouse) + ' (' + s.sectionType + ')';
+    const dateStr = date ? '\n' + (lang === 'es' ? 'Fecha' : 'Date') + ': ' + date : '';
+    const assigneeStr = assignee ? '\n' + (lang === 'es' ? 'Para' : 'For') + ': ' + assignee : '';
     const baseUrl = window.location.origin;
     const completeUrl = baseUrl + '#section=' + encodeURIComponent(currentSectionId) + '&complete=' + taskId;
-    const msg = 'M&G Nursery — Task\n' +
-                'Section: ' + sectionLabel + '\n' +
-                'Task: ' + task + dateStr + assigneeStr + '\n\n' +
-                'Tap to mark complete when done:\n' + completeUrl;
+    const msg = (lang === 'es' ? 'M&G Vivero — Tarea\n' : 'M&G Nursery — Task\n') +
+                (lang === 'es' ? 'Seccion' : 'Section') + ': ' + sectionLabel + '\n' +
+                (lang === 'es' ? 'Tarea' : 'Task') + ': ' + task + dateStr + assigneeStr + '\n\n' +
+                (lang === 'es' ? 'Toque para marcar como completada cuando termine:' : 'Tap to mark complete when done:') + '\n' + completeUrl;
     const waUrl = 'https://wa.me/?text=' + encodeURIComponent(msg);
     const w = window.open(waUrl, '_blank');
     if (!w || w.closed || typeof w.closed === 'undefined') {
@@ -2570,15 +2882,15 @@ function exportBackup() {
     setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
     const totalTrees = sectionsData.reduce((sum, s) =>
       sum + (s.entries || []).reduce((q, e) => q + (parseInt(e.quantity) || 0), 0), 0);
-    alert('Backup downloaded.\n\n' + sectionsData.length + ' sections, ' + totalTrees.toLocaleString() + ' trees.');
+    alert(t('alert_backup_done') + '\n\n' + sectionsData.length + ' ' + t('sections') + ', ' + totalTrees.toLocaleString() + ' ' + t('trees') + '.');
   } catch (e) {
-    alert('Backup failed: ' + e.message);
+    alert(t('alert_backup_failed') + e.message);
   }
 }
 
 async function restoreFromBackup() {
   if (!cloudOk) {
-    alert('Cloud not connected. Restore requires Supabase access.');
+    alert(t('alert_cloud_required'));
     return;
   }
   const fileInput = document.createElement('input');
@@ -2592,10 +2904,10 @@ async function restoreFromBackup() {
       const backup = JSON.parse(text);
       const sections = backup.sections || [];
       if (!sections.length) {
-        alert('Backup file has no sections.');
+        alert(t('alert_no_sections'));
         return;
       }
-      if (!confirm('Restore ' + sections.length + ' sections from backup?\n\nThis will OVERWRITE existing inventory entries for any section in the backup. Sections not in the backup will be unaffected.\n\nContinue?')) {
+      if (!confirm(t('confirm_restore').replace('{n}', sections.length))) {
         return;
       }
       let ok = 0, fail = 0;
@@ -2620,11 +2932,11 @@ async function restoreFromBackup() {
           fail++;
         }
       }
-      alert('Restore complete.\n\nRestored: ' + ok + '\nFailed: ' + fail + '\n\nReloading data...');
+      alert(t('alert_restore_done') + '\n\n' + t('restored') + ': ' + ok + '\n' + t('failed') + ': ' + fail + '\n\n' + t('reloading'));
       // Reload from cloud to refresh local state
       await loadFromCloud();
     } catch (err) {
-      alert('Restore failed: ' + err.message);
+      alert(t('alert_restore_failed') + err.message);
       console.error('Restore error:', err);
     }
   };
@@ -2735,24 +3047,24 @@ async function handleDeepLink() {
 async function _promptCompleteFromLink(taskId, sectionId) {
   // Fetch fresh task data to confirm it exists and is still pending
   if (!cloudOk) {
-    alert('Cloud not connected — cannot mark task complete right now.');
+    alert(t('alert_cloud_task_complete'));
     return;
   }
   try {
     const { data, error } = await sb.from('nursery_tasks').select('*').eq('id', taskId).single();
     if (error || !data) {
-      alert('This task could not be found. It may have been deleted.');
+      alert(t('alert_task_not_found'));
       // Clear the hash so refreshing doesn't re-prompt
       history.replaceState(null, '', window.location.pathname);
       return;
     }
     if (data.status === 'completed') {
-      alert('This task was already marked complete on ' + new Date(data.completed_at).toLocaleString() + '.');
+      alert(t('alert_task_already_complete') + new Date(data.completed_at).toLocaleString() + '.');
       history.replaceState(null, '', window.location.pathname + '#section=' + encodeURIComponent(sectionId));
       return;
     }
     if (data.status === 'deleted') {
-      alert('This task was removed.');
+      alert(t('alert_task_removed'));
       history.replaceState(null, '', window.location.pathname + '#section=' + encodeURIComponent(sectionId));
       return;
     }
@@ -2796,6 +3108,15 @@ async function _promptCompleteFromLink(taskId, sectionId) {
     alert('Something went wrong. Try again from the Tasks tab.');
   }
 }
+
+// Apply initial language toggle state and static translations
+(function initI18n() {
+  const en = document.getElementById('btn-lang-en');
+  const es = document.getElementById('btn-lang-es');
+  if (en) en.classList.toggle('active', lang === 'en');
+  if (es) es.classList.toggle('active', lang === 'es');
+  applyStaticTranslations();
+})();
 
 initSupabase();
 renderHome();
