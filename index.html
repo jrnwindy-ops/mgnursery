@@ -236,6 +236,38 @@ table.sheet td.cell-del button:hover { opacity:1; }
     <div style="font-size:18px;font-weight:800;margin-bottom:4px" id="entry-modal-title">Add Variety Entry</div>
     <div style="font-size:12px;color:var(--tx3);margin-bottom:14px" id="entry-modal-section"></div>
 
+    <label class="form-label">Type</label>
+    <select class="form-input" id="entry-type">
+      <option value="Grafted Tree">Grafted Tree (default)</option>
+      <option value="Seedling">Seedling (rootstock only, not grafted yet)</option>
+      <option value="Sleeve">Sleeve (empty, awaiting seedling)</option>
+    </select>
+
+    <label class="form-label">Placement (Row in House)</label>
+    <div class="form-row">
+      <div>
+        <select class="form-input" id="entry-row">
+          <option value="">— Row —</option>
+          <option value="1">Row 1</option>
+          <option value="2">Row 2</option>
+          <option value="3">Row 3</option>
+          <option value="4">Row 4</option>
+          <option value="5">Row 5</option>
+          <option value="6">Row 6</option>
+          <option value="7">Row 7</option>
+          <option value="8">Row 8</option>
+        </select>
+      </div>
+      <div>
+        <select class="form-input" id="entry-rowsub">
+          <option value="">— Sub (optional) —</option>
+          <option value="A">A</option>
+          <option value="B">B</option>
+          <option value="C">C</option>
+        </select>
+      </div>
+    </div>
+
     <label class="form-label">Scion / Variety</label>
     <select class="form-input" id="entry-scion">
       <option value="">— Select scion —</option>
@@ -1495,16 +1527,37 @@ async function saveTaskToCloud(sectionId, task, date, assignee) {
 
 function calcStats() {
   const sections = Object.values(SECTIONS);
-  let active = 0, totalQty = 0, sellable = 0, reserved = 0, tasks = 0, totalEntries = 0;
+  let active = 0, planted = 0, sellable = 0, reserved = 0, tasks = 0, totalEntries = 0;
+  let sleeves = 0, seedlings = 0;
   sections.forEach(s => {
     if (s.entries && s.entries.length > 0) {
       active++;
       totalEntries += s.entries.length;
       s.entries.forEach(e => {
-        totalQty += (e.quantity || 0);
-        const rate = e.takeRate !== undefined ? e.takeRate : 85;
-        sellable += Math.floor((e.quantity || 0) * rate / 100);
-        reserved += (e.reservedQty || 0);
+        // Infer type for backward compatibility with old entries that don't have e.type
+        let t = e.type;
+        if (!t) {
+          if (e.scion && e.rootstock) t = 'Grafted Tree';
+          else if (e.rootstock && !e.scion) t = 'Seedling';
+          else if (!e.scion && !e.rootstock && (e.quantity || 0) > 0) t = 'Sleeve';
+          else t = 'Grafted Tree';
+        }
+        const qty = e.quantity || 0;
+        if (t === 'Sleeve') {
+          // Sleeves don't count toward Planted or Sellable
+          sleeves += qty;
+        } else if (t === 'Seedling') {
+          // Seedlings count toward Planted but not Sellable (not grafted yet)
+          seedlings += qty;
+          planted += qty;
+          reserved += (e.reservedQty || 0);
+        } else {
+          // Grafted Tree — current behavior
+          planted += qty;
+          const rate = e.takeRate !== undefined ? e.takeRate : 85;
+          sellable += Math.floor(qty * rate / 100);
+          reserved += (e.reservedQty || 0);
+        }
       });
     }
     tasks += (s.tasks || []).filter(t => t.startsWith('TASK:')).length;
@@ -1512,7 +1565,7 @@ function calcStats() {
   // Add variety-pool reservations from CRM contracts (Phase 2)
   // Note: this is at the variety-pool level — Phase 3 will pin to specific entries
   const totalReserved = reserved + (RESERVATIONS_POOL_TOTAL || 0);
-  return { active, totalQty, sellable, reserved: totalReserved, tasks, totalEntries };
+  return { active, totalQty: planted, sellable, reserved: totalReserved, tasks, totalEntries, sleeves, seedlings };
 }
 
 function renderStats() {
@@ -1522,6 +1575,8 @@ function renderStats() {
     '<div class="stat-pill"><div class="stat-num">' + s.totalQty.toLocaleString() + '</div><div class="stat-lbl">Planted</div></div>' +
     '<div class="stat-pill"><div class="stat-num">' + s.sellable.toLocaleString() + '</div><div class="stat-lbl">Sellable</div></div>' +
     '<div class="stat-pill"><div class="stat-num">' + s.reserved.toLocaleString() + '</div><div class="stat-lbl">Reserved</div></div>' +
+    '<div class="stat-pill" style="background:#FEF3C7;border-color:#FDE68A;"><div class="stat-num" style="color:#92400E">' + s.sleeves.toLocaleString() + '</div><div class="stat-lbl">Sleeves</div></div>' +
+    '<div class="stat-pill" style="background:#DBEAFE;border-color:#BFDBFE;"><div class="stat-num" style="color:#1E40AF">' + s.seedlings.toLocaleString() + '</div><div class="stat-lbl">Seedlings</div></div>' +
     '<div class="stat-pill"><div class="stat-num">' + s.tasks + '</div><div class="stat-lbl">Tasks</div></div>';
 }
 
@@ -1781,6 +1836,21 @@ function renderListView(sections) {
          buildGroup('House 2', '40 sub-houses · ' + h2Total.toLocaleString() + ' trees', h2);
 }
 
+function _entryType(e) {
+  // Backward-compat type detection for an entry
+  if (e.type) return e.type;
+  if (e.scion && e.rootstock) return 'Grafted Tree';
+  if (e.rootstock && !e.scion) return 'Seedling';
+  if (!e.scion && !e.rootstock && (e.quantity || 0) > 0) return 'Sleeve';
+  return 'Grafted Tree';
+}
+
+function _typeBadge(type) {
+  if (type === 'Sleeve') return '<span style="display:inline-block;background:#FEF3C7;color:#92400E;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;margin-left:4px;letter-spacing:.04em;text-transform:uppercase">SLEEVE</span>';
+  if (type === 'Seedling') return '<span style="display:inline-block;background:#DBEAFE;color:#1E40AF;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;margin-left:4px;letter-spacing:.04em;text-transform:uppercase">SEEDLING</span>';
+  return '';  // Grafted Tree = no badge (it's the default)
+}
+
 function buildCard(s) {
   const statusClass = getStatusClass(s);
   const entries = s.entries || [];
@@ -1791,7 +1861,14 @@ function buildCard(s) {
   const more = entries.length - 3;
   const varHtml = isEmpty
     ? '<div class="sub-empty">Empty</div>'
-    : visible.map(e => '<div class="sub-variety-row"><strong>' + (e.scion || '—') + '</strong>' + (e.rootstock ? ' / ' + e.rootstock : '') + ' · ' + (e.quantity || 0).toLocaleString() + '</div>').join('') +
+    : visible.map(e => {
+        const et = _entryType(e);
+        let label;
+        if (et === 'Sleeve') label = '<strong>Empty Sleeves</strong>';
+        else if (et === 'Seedling') label = '<strong>' + (e.rootstock || '—') + ' seedling</strong>';
+        else label = '<strong>' + (e.scion || '—') + '</strong>' + (e.rootstock ? ' / ' + e.rootstock : '');
+        return '<div class="sub-variety-row">' + label + _typeBadge(et) + ' · ' + (e.quantity || 0).toLocaleString() + '</div>';
+      }).join('') +
       (more > 0 ? '<div class="sub-variety-row" style="color:var(--g600);font-weight:700">+' + more + ' more</div>' : '');
   const taskCount = (s.tasks || []).filter(t => t.startsWith('TASK:')).length;
   const taskBadge = taskCount > 0
@@ -2152,25 +2229,52 @@ function openSection(sectionId) {
   detail.classList.add('open');
 
   const entries = s.entries || [];
-  const totalQty = entries.reduce((sum, e) => sum + (e.quantity || 0), 0);
-  const totalSellable = entries.reduce((sum, e) => sum + Math.floor((e.quantity || 0) * (e.takeRate !== undefined ? e.takeRate : 85) / 100), 0);
+  const totalQty = entries.reduce((sum, e) => {
+    // Sleeves don't count toward "Planted" total in a section
+    return _entryType(e) === 'Sleeve' ? sum : sum + (e.quantity || 0);
+  }, 0);
+  const totalSellable = entries.reduce((sum, e) => {
+    if (_entryType(e) !== 'Grafted Tree') return sum;
+    return sum + Math.floor((e.quantity || 0) * (e.takeRate !== undefined ? e.takeRate : 85) / 100);
+  }, 0);
   const totalReserved = entries.reduce((sum, e) => sum + (e.reservedQty || 0), 0);
+
+  // Sort entries by row placement (Row 1A, 1B, 2, 3 ...) for display order,
+  // but preserve the original index so editEntry/deleteEntry still target the right element
+  const indexedEntries = entries.map((e, originalIdx) => ({e, originalIdx}));
+  indexedEntries.sort((a, b) => {
+    const rowA = parseInt(a.e.row) || 99;
+    const rowB = parseInt(b.e.row) || 99;
+    if (rowA !== rowB) return rowA - rowB;
+    return (a.e.rowSub || '').localeCompare(b.e.rowSub || '');
+  });
 
   const entriesHtml = entries.length
     ? '<div class="entries-table">' +
       '<div class="entries-header"><div>Scion</div><div>Rootstock</div><div style="text-align:right">Qty</div><div style="text-align:right">Sellable</div><div></div></div>' +
-      entries.map((e, i) => {
+      indexedEntries.map(({e, originalIdx}) => {
+        const i = originalIdx;
+        const et = _entryType(e);
         const rate = e.takeRate !== undefined ? e.takeRate : 85;
-        const sellable = Math.floor((e.quantity || 0) * rate / 100);
+        // Sleeves & Seedlings have no sellable count
+        const isGrafted = (et === 'Grafted Tree');
+        const sellable = isGrafted ? Math.floor((e.quantity || 0) * rate / 100) : 0;
         const meta = [];
+        // Placement (Row X[A/B/C]) shows first in meta — visible at a glance
+        if (e.row) meta.push('Row ' + e.row + (e.rowSub || ''));
         if (e.transplant) meta.push(e.transplant);
         if (e.graftDate) meta.push('Graft: ' + new Date(e.graftDate + 'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'}));
         if (e.shipmentYear) meta.push('Ship: ' + e.shipmentYear);
+        // Label varies by type
+        let scionLabel;
+        if (et === 'Sleeve') scionLabel = '<em style="color:#92400E">Empty Sleeves</em>';
+        else if (et === 'Seedling') scionLabel = '<em style="color:#1E40AF">Seedling</em>';
+        else scionLabel = e.scion || '—';
         return '<div class="entry-row" onclick="editEntry(' + i + ')">' +
-          '<div><div class="entry-scion">' + (e.scion || '—') + '</div>' + (meta.length ? '<div class="entry-meta">' + meta.join(' · ') + '</div>' : '') + '</div>' +
+          '<div><div class="entry-scion">' + scionLabel + _typeBadge(et) + '</div>' + (meta.length ? '<div class="entry-meta">' + meta.join(' · ') + '</div>' : '') + '</div>' +
           '<div class="entry-rootstock">' + (e.rootstock || '—') + '</div>' +
-          '<div class="entry-qty">' + (e.quantity || 0).toLocaleString() + '<div class="entry-meta" style="margin-top:2px">' + rate + '%</div></div>' +
-          '<div class="entry-sellable">' + sellable.toLocaleString() + '</div>' +
+          '<div class="entry-qty">' + (e.quantity || 0).toLocaleString() + (isGrafted ? '<div class="entry-meta" style="margin-top:2px">' + rate + '%</div>' : '') + '</div>' +
+          '<div class="entry-sellable">' + (isGrafted ? sellable.toLocaleString() : '—') + '</div>' +
           '<button class="del-btn" onclick="event.stopPropagation();deleteEntry(' + i + ')">✕</button>' +
         '</div>';
       }).join('') +
@@ -2235,8 +2339,9 @@ function addEntry() {
   if (!s) return;
   document.getElementById('entry-modal-title').textContent = 'Add Variety Entry';
   document.getElementById('entry-modal-section').textContent = s.house + ' · ' + s.subhouse + ' · ' + s.sectionType;
-  ['entry-scion','entry-rootstock','entry-transplant','entry-qty','entry-graft','entry-shipment'].forEach(id => document.getElementById(id).value = '');
+  ['entry-scion','entry-rootstock','entry-transplant','entry-qty','entry-graft','entry-shipment','entry-row','entry-rowsub'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('entry-takerate').value = 70;
+  document.getElementById('entry-type').value = 'Grafted Tree';
   document.getElementById('modal-entry').classList.add('open');
 }
 
@@ -2248,6 +2353,18 @@ function editEntry(idx) {
   if (!e) return;
   document.getElementById('entry-modal-title').textContent = 'Edit Variety Entry';
   document.getElementById('entry-modal-section').textContent = s.house + ' · ' + s.subhouse;
+  // Backward-compat: infer type from existing data if not set
+  // Has scion + rootstock = Grafted Tree (current default behavior, preserves existing data)
+  // Has rootstock, no scion = Seedling
+  // Has nothing = Sleeve
+  let inferredType = e.type;
+  if (!inferredType) {
+    if (e.scion && e.rootstock) inferredType = 'Grafted Tree';
+    else if (e.rootstock && !e.scion) inferredType = 'Seedling';
+    else if (!e.scion && !e.rootstock && (e.quantity || 0) > 0) inferredType = 'Sleeve';
+    else inferredType = 'Grafted Tree';
+  }
+  document.getElementById('entry-type').value = inferredType;
   document.getElementById('entry-scion').value = e.scion || '';
   document.getElementById('entry-rootstock').value = e.rootstock || '';
   document.getElementById('entry-transplant').value = e.transplant || '';
@@ -2255,6 +2372,8 @@ function editEntry(idx) {
   document.getElementById('entry-takerate').value = e.takeRate !== undefined ? e.takeRate : 85;
   document.getElementById('entry-graft').value = e.graftDate || '';
   document.getElementById('entry-shipment').value = e.shipmentYear || '';
+  document.getElementById('entry-row').value = e.row || '';
+  document.getElementById('entry-rowsub').value = e.rowSub || '';
   document.getElementById('modal-entry').classList.add('open');
 }
 
@@ -2264,6 +2383,7 @@ async function saveEntry() {
   const s = SECTIONS[currentSectionId];
   if (!s) return;
   const entry = {
+    type: document.getElementById('entry-type').value || 'Grafted Tree',
     scion: document.getElementById('entry-scion').value,
     rootstock: document.getElementById('entry-rootstock').value,
     transplant: document.getElementById('entry-transplant').value.trim(),
@@ -2271,11 +2391,32 @@ async function saveEntry() {
     takeRate: parseInt(document.getElementById('entry-takerate').value) || 70,
     graftDate: document.getElementById('entry-graft').value || '',
     shipmentYear: document.getElementById('entry-shipment').value.trim(),
+    row: document.getElementById('entry-row').value || '',
+    rowSub: document.getElementById('entry-rowsub').value || '',
     reservedQty: currentEntryIdx !== null && s.entries[currentEntryIdx] ? (s.entries[currentEntryIdx].reservedQty || 0) : 0,
   };
-  if (!entry.scion && !entry.rootstock && !entry.quantity) {
-    alert('Please enter at least a scion, rootstock, or quantity.');
-    return;
+  // Sleeves don't have scion, rootstock, take rate, or graft date — clean them out
+  if (entry.type === 'Sleeve') {
+    entry.scion = '';
+    entry.rootstock = '';
+    entry.graftDate = '';
+  }
+  // Seedlings don't have scion or graft date (not grafted yet)
+  if (entry.type === 'Seedling') {
+    entry.scion = '';
+    entry.graftDate = '';
+  }
+  // Validate per-type
+  if (entry.type === 'Sleeve') {
+    if (!entry.quantity) { alert('Please enter the quantity of empty sleeves.'); return; }
+  } else if (entry.type === 'Seedling') {
+    if (!entry.rootstock) { alert('Please select a rootstock for the seedling.'); return; }
+    if (!entry.quantity) { alert('Please enter the quantity of seedlings.'); return; }
+  } else {
+    if (!entry.scion && !entry.rootstock && !entry.quantity) {
+      alert('Please enter at least a scion, rootstock, or quantity.');
+      return;
+    }
   }
   if (currentEntryIdx === null) s.entries.push(entry);
   else s.entries[currentEntryIdx] = entry;
