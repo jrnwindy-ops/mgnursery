@@ -333,7 +333,7 @@ table.sheet td.cell-del button:hover { opacity:1; }
       </div>
       <div>
         <label class="form-label">Take Rate %</label>
-        <input class="form-input" id="entry-takerate" type="number" min="0" max="100" value="70">
+        <input class="form-input" id="entry-takerate" type="number" min="0" max="100" value="85">
       </div>
     </div>
 
@@ -2340,7 +2340,7 @@ function addEntry() {
   document.getElementById('entry-modal-title').textContent = 'Add Variety Entry';
   document.getElementById('entry-modal-section').textContent = s.house + ' · ' + s.subhouse + ' · ' + s.sectionType;
   ['entry-scion','entry-rootstock','entry-transplant','entry-qty','entry-graft','entry-shipment','entry-row','entry-rowsub'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('entry-takerate').value = 70;
+  document.getElementById('entry-takerate').value = 85;
   document.getElementById('entry-type').value = 'Grafted Tree';
   document.getElementById('modal-entry').classList.add('open');
 }
@@ -2388,7 +2388,7 @@ async function saveEntry() {
     rootstock: document.getElementById('entry-rootstock').value,
     transplant: document.getElementById('entry-transplant').value.trim(),
     quantity: parseInt(document.getElementById('entry-qty').value) || 0,
-    takeRate: parseInt(document.getElementById('entry-takerate').value) || 70,
+    takeRate: parseInt(document.getElementById('entry-takerate').value) || 85,
     graftDate: document.getElementById('entry-graft').value || '',
     shipmentYear: document.getElementById('entry-shipment').value.trim(),
     row: document.getElementById('entry-row').value || '',
