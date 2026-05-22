@@ -225,6 +225,7 @@ table.sheet td.cell-del button:hover { opacity:1; }
   <button class="view-btn active" id="view-list-btn" onclick="setView('list')" data-i18n="view_list">📋 List</button>
   <button class="view-btn" id="view-map-btn" onclick="setView('map')" data-i18n="view_map">🗺️ Map</button>
   <button class="view-btn" id="view-sheet-btn" onclick="setView('sheet')" data-i18n="view_sheet">📊 Sheet</button>
+  <button class="view-btn" id="view-forecast-btn" onclick="setView('forecast')" data-i18n="view_forecast">📅 Forecast</button>
   <button class="view-btn" id="view-tasks-btn" onclick="setView('tasks')"><span data-i18n="view_tasks">✓ Tasks</span> <span id="view-tasks-count" style="display:none;background:#D97706;color:#fff;border-radius:8px;padding:1px 6px;font-size:10px;margin-left:3px;font-weight:700"></span></button>
   <input type="text" class="search-input" id="search-input" placeholder="Search variety, rootstock, house..." data-i18n-ph="search_placeholder" oninput="renderHome()">
 </div>
@@ -330,34 +331,49 @@ table.sheet td.cell-del button:hover { opacity:1; }
       <option value="Other">Other</option>
     </select>
 
-    <label class="form-label">Transplant / Notes</label>
-    <input class="form-input" id="entry-transplant" type="text" placeholder="Optional notes">
+    <label class="form-label" data-i18n="lbl_transplant">Transplant / Notes</label>
+    <input class="form-input" id="entry-transplant" type="text" placeholder="Optional notes" data-i18n-ph="ph_optional_notes">
 
     <div class="form-row">
       <div>
-        <label class="form-label">Quantity</label>
-        <input class="form-input" id="entry-qty" type="number" min="0" placeholder="e.g. 5000">
+        <label class="form-label" data-i18n="lbl_quantity">Quantity</label>
+        <input class="form-input" id="entry-qty" type="number" min="0" placeholder="e.g. 5000" data-i18n-ph="ph_qty_example">
       </div>
       <div>
-        <label class="form-label">Take Rate %</label>
+        <label class="form-label" data-i18n="lbl_take_rate">Take Rate %</label>
         <input class="form-input" id="entry-takerate" type="number" min="0" max="100" value="85">
       </div>
     </div>
 
-    <div class="form-row">
-      <div>
-        <label class="form-label">Graft Date</label>
-        <input class="form-input" id="entry-graft" type="date">
+    <!-- LIFECYCLE DATES: Transplant → (+60d) Graft → (+300d) Available -->
+    <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:12px;margin-top:6px">
+      <div style="font-size:11px;font-weight:700;color:#2D6A4F;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px" data-i18n="lifecycle_header">🌱 Lifecycle Dates (auto-scheduled)</div>
+      <div class="form-row">
+        <div>
+          <label class="form-label" data-i18n="lbl_transplant_date">Transplant Date</label>
+          <input class="form-input" id="entry-transplant-date" type="date" onchange="onTransplantDateChange()">
+        </div>
+        <div>
+          <label class="form-label" data-i18n="lbl_graft_date">Graft Date</label>
+          <input class="form-input" id="entry-graft" type="date" onchange="onGraftDateChange()">
+        </div>
       </div>
-      <div>
-        <label class="form-label">Shipment Year</label>
-        <input class="form-input" id="entry-shipment" type="text" placeholder="e.g. 2026">
+      <div class="form-row" style="margin-top:8px">
+        <div>
+          <label class="form-label" data-i18n="lbl_available_date">Available Date</label>
+          <input class="form-input" id="entry-available" type="date">
+        </div>
+        <div>
+          <label class="form-label" data-i18n="lbl_shipment_year">Shipment Year</label>
+          <input class="form-input" id="entry-shipment" type="text" placeholder="e.g. 2026" data-i18n-ph="ph_year_example">
+        </div>
       </div>
+      <div style="font-size:10px;color:#6B7280;margin-top:6px;font-style:italic" data-i18n="lifecycle_hint">Transplant + 60 days = Graft · Graft + 300 days = Available. Edit any date to override.</div>
     </div>
 
     <div class="form-actions">
-      <button class="btn-cancel" onclick="closeEntryModal()">Cancel</button>
-      <button class="btn-submit" onclick="saveEntry()">Save Entry</button>
+      <button class="btn-cancel" onclick="closeEntryModal()" data-i18n="btn_cancel">Cancel</button>
+      <button class="btn-submit" onclick="saveEntry()" data-i18n="btn_save_entry">Save Entry</button>
     </div>
   </div>
 </div>
@@ -1368,6 +1384,13 @@ const T_DICT = {
     view_map: '🗺️ Map',
     view_sheet: '📊 Sheet',
     view_tasks: '✓ Tasks',
+    view_forecast: '📅 Forecast',
+    forecast_title: 'Availability Forecast',
+    forecast_subtitle: 'Grafted trees becoming sellable, grouped by month',
+    forecast_empty: 'No trees with scheduled availability dates yet. Add a transplant or graft date to an entry to see the forecast.',
+    forecast_trees_available: 'trees available',
+    forecast_unscheduled: 'No date set',
+    forecast_total: 'Total Forecasted',
     // Stat pills
     stat_active: 'Active',
     stat_planted: 'Planted',
@@ -1399,6 +1422,10 @@ const T_DICT = {
     lbl_take_rate: 'Take Rate %',
     lbl_graft_date: 'Graft Date',
     lbl_shipment_year: 'Shipment Year',
+    lbl_transplant_date: 'Transplant Date',
+    lbl_available_date: 'Available Date',
+    lifecycle_header: '🌱 Lifecycle Dates (auto-scheduled)',
+    lifecycle_hint: 'Transplant + 60 days = Graft · Graft + 300 days = Available. Edit any date to override.',
     ph_year_example: 'e.g. 2026',
     btn_cancel: 'Cancel',
     btn_save_entry: 'Save Entry',
@@ -1486,6 +1513,13 @@ const T_DICT = {
     view_map: '🗺️ Mapa',
     view_sheet: '📊 Hoja',
     view_tasks: '✓ Tareas',
+    view_forecast: '📅 Pronostico',
+    forecast_title: 'Pronostico de Disponibilidad',
+    forecast_subtitle: 'Arboles injertados que estaran listos para vender, agrupados por mes',
+    forecast_empty: 'Aun no hay arboles con fechas de disponibilidad programadas. Agregue una fecha de trasplante o injerto a una variedad para ver el pronostico.',
+    forecast_trees_available: 'arboles disponibles',
+    forecast_unscheduled: 'Sin fecha',
+    forecast_total: 'Total Pronosticado',
     // Stat pills
     stat_active: 'Activas',
     stat_planted: 'Plantado',
@@ -1517,6 +1551,10 @@ const T_DICT = {
     lbl_take_rate: 'Tasa de Prendimiento %',
     lbl_graft_date: 'Fecha de Injerto',
     lbl_shipment_year: 'Ano de Envio',
+    lbl_transplant_date: 'Fecha de Trasplante',
+    lbl_available_date: 'Fecha Disponible',
+    lifecycle_header: '🌱 Fechas del Ciclo (programadas automaticamente)',
+    lifecycle_hint: 'Trasplante + 60 dias = Injerto · Injerto + 300 dias = Disponible. Edite cualquier fecha para cambiar.',
     ph_year_example: 'ej. 2026',
     btn_cancel: 'Cancelar',
     btn_save_entry: 'Guardar Variedad',
@@ -1895,11 +1933,13 @@ function setView(view) {
   document.getElementById('view-list-btn').classList.toggle('active', view === 'list');
   document.getElementById('view-map-btn').classList.toggle('active', view === 'map');
   document.getElementById('view-sheet-btn').classList.toggle('active', view === 'sheet');
+  const fb = document.getElementById('view-forecast-btn');
+  if (fb) fb.classList.toggle('active', view === 'forecast');
   const tb = document.getElementById('view-tasks-btn');
   if (tb) tb.classList.toggle('active', view === 'tasks');
-  // Hide search bar when in Tasks view (filter UI is inline)
+  // Hide search bar when in Tasks or Forecast view (no per-section filter needed)
   const search = document.getElementById('search-input');
-  if (search) search.style.display = (view === 'tasks') ? 'none' : '';
+  if (search) search.style.display = (view === 'tasks' || view === 'forecast') ? 'none' : '';
   renderHome();
 }
 
@@ -1941,9 +1981,104 @@ function renderHome() {
   if (currentView === 'list') content.innerHTML = renderListView(filtered);
   else if (currentView === 'map') content.innerHTML = renderMapView(filtered);
   else if (currentView === 'sheet') content.innerHTML = renderSheetView(filtered);
+  else if (currentView === 'forecast') content.innerHTML = renderForecastView();
   else if (currentView === 'tasks') content.innerHTML = renderTasksView();
   // Update Tasks badge count in toggle
   updateTasksToggleBadge();
+}
+
+// ── FORECAST VIEW (Available-by-month rollup) ─────────────────────────────────
+// Groups all Grafted-Tree entries by their available-to-sell month.
+// "Available date" is the stored availableDate, or derived: graft+300, or transplant+60+300.
+// Shows sellable trees (qty × takeRate) since that's what's actually for sale.
+function renderForecastView() {
+  const buckets = {};   // 'YYYY-MM' -> { sellable, raw, count }
+  let unscheduledSellable = 0, unscheduledRaw = 0, unscheduledCount = 0;
+  let totalSellable = 0;
+
+  Object.values(SECTIONS).forEach(s => {
+    (s.entries || []).forEach(e => {
+      // Only grafted trees become "available to sell" on a date.
+      // Sleeves are not trees; seedlings are not yet grafted (no reliable available date).
+      if (_entryType(e) !== 'Grafted Tree') return;
+      const qty = e.quantity || 0;
+      if (qty === 0) return;
+      const rate = e.takeRate !== undefined ? e.takeRate : 85;
+      const sellable = Math.floor(qty * rate / 100);
+      totalSellable += sellable;
+      const avail = _availableDate(e);
+      if (!avail) {
+        unscheduledSellable += sellable;
+        unscheduledRaw += qty;
+        unscheduledCount++;
+        return;
+      }
+      const ym = avail.slice(0, 7);  // 'YYYY-MM'
+      if (!buckets[ym]) buckets[ym] = { sellable: 0, raw: 0, count: 0 };
+      buckets[ym].sellable += sellable;
+      buckets[ym].raw += qty;
+      buckets[ym].count++;
+    });
+  });
+
+  const months = Object.keys(buckets).sort();
+  if (months.length === 0 && unscheduledCount === 0) {
+    return '<div style="padding:40px 24px;text-align:center;color:var(--tx4);font-size:14px">' + t('forecast_empty') + '</div>';
+  }
+
+  // Month label formatter, locale-aware
+  const locale = (lang === 'es') ? 'es-MX' : 'en-US';
+  const fmtMonth = (ym) => {
+    const [y, m] = ym.split('-');
+    const d = new Date(parseInt(y), parseInt(m) - 1, 1);
+    const label = d.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  };
+
+  // Find the max for proportional bar widths
+  const maxSellable = Math.max(1, ...months.map(m => buckets[m].sellable));
+
+  let html = '<div style="padding:16px">';
+  // Header
+  html += '<div style="margin-bottom:4px;font-family:DM Serif Display,serif;font-size:22px;color:#1B4332">' + t('forecast_title') + '</div>';
+  html += '<div style="font-size:13px;color:var(--tx3);margin-bottom:16px">' + t('forecast_subtitle') + '</div>';
+
+  // Total card
+  html += '<div style="background:linear-gradient(135deg,#1B4332,#2D6A4F);border-radius:12px;padding:16px;margin-bottom:16px;color:#fff">' +
+    '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;opacity:.8">' + t('forecast_total') + '</div>' +
+    '<div style="font-size:30px;font-weight:800;margin-top:2px">' + totalSellable.toLocaleString() + '</div>' +
+    '<div style="font-size:12px;opacity:.85">' + t('forecast_trees_available') + '</div>' +
+  '</div>';
+
+  // Month rows
+  months.forEach(ym => {
+    const b = buckets[ym];
+    const pct = Math.round((b.sellable / maxSellable) * 100);
+    html += '<div style="background:#fff;border:1px solid var(--bd);border-radius:10px;padding:12px 14px;margin-bottom:8px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">' +
+        '<div style="font-size:15px;font-weight:700;color:#1B4332">' + fmtMonth(ym) + '</div>' +
+        '<div style="font-size:18px;font-weight:800;color:#2D6A4F">' + b.sellable.toLocaleString() + '</div>' +
+      '</div>' +
+      '<div style="height:8px;background:#E1E8E2;border-radius:4px;overflow:hidden;margin-bottom:4px">' +
+        '<div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,#52B788,#2D6A4F);border-radius:4px"></div>' +
+      '</div>' +
+      '<div style="font-size:11px;color:var(--tx3)">' + b.sellable.toLocaleString() + ' ' + t('forecast_trees_available') + ' · ' + b.raw.toLocaleString() + ' ' + t('stat_planted').toLowerCase() + '</div>' +
+    '</div>';
+  });
+
+  // Unscheduled bucket (grafted trees with no date info)
+  if (unscheduledCount > 0) {
+    html += '<div style="background:#FEF3C7;border:1px solid #FDE68A;border-radius:10px;padding:12px 14px;margin-bottom:8px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:baseline">' +
+        '<div style="font-size:14px;font-weight:700;color:#92400E">' + t('forecast_unscheduled') + '</div>' +
+        '<div style="font-size:16px;font-weight:800;color:#92400E">' + unscheduledSellable.toLocaleString() + '</div>' +
+      '</div>' +
+      '<div style="font-size:11px;color:#92400E;opacity:.8;margin-top:2px">' + unscheduledSellable.toLocaleString() + ' ' + t('forecast_trees_available') + '</div>' +
+    '</div>';
+  }
+
+  html += '</div>';
+  return html;
 }
 
 // ── TASKS VIEW (Phase 1: see all open tasks across sections) ───────────────
@@ -2146,6 +2281,49 @@ function renderListView(sections) {
   const h2Total = h2.reduce((sum, s) => sum + (s.entries || []).reduce((a, e) => a + (e.quantity || 0), 0), 0);
   return buildGroup('House 1', '16 sub-houses · ' + h1Total.toLocaleString() + ' trees', h1) +
          buildGroup('House 2', '40 sub-houses · ' + h2Total.toLocaleString() + ' trees', h2);
+}
+
+// ─── LIFECYCLE DATE SCHEDULING ───────────────────────────────────────────────
+// Transplant + 60d = Graft date.  Graft + 300d = Available date.
+const DAYS_TRANSPLANT_TO_GRAFT = 60;
+const DAYS_GRAFT_TO_AVAILABLE = 300;
+
+function _addDays(dateStr, days) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T12:00:00');
+  if (isNaN(d.getTime())) return '';
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split('T')[0];
+}
+
+// When transplant date changes, auto-suggest graft date (only if graft is empty,
+// so we never clobber a manually-entered graft date)
+function onTransplantDateChange() {
+  const tEl = document.getElementById('entry-transplant-date');
+  const gEl = document.getElementById('entry-graft');
+  if (!tEl || !gEl) return;
+  if (tEl.value && !gEl.value) {
+    gEl.value = _addDays(tEl.value, DAYS_TRANSPLANT_TO_GRAFT);
+    onGraftDateChange();  // cascade to available date
+  }
+}
+
+// When graft date changes, auto-suggest available date (only if available is empty)
+function onGraftDateChange() {
+  const gEl = document.getElementById('entry-graft');
+  const aEl = document.getElementById('entry-available');
+  if (!gEl || !aEl) return;
+  if (gEl.value && !aEl.value) {
+    aEl.value = _addDays(gEl.value, DAYS_GRAFT_TO_AVAILABLE);
+  }
+}
+
+// Compute the effective available date for an entry (stored, or derived from graft/transplant)
+function _availableDate(e) {
+  if (e.availableDate) return e.availableDate;
+  if (e.graftDate) return _addDays(e.graftDate, DAYS_GRAFT_TO_AVAILABLE);
+  if (e.transplantDate) return _addDays(_addDays(e.transplantDate, DAYS_TRANSPLANT_TO_GRAFT), DAYS_GRAFT_TO_AVAILABLE);
+  return '';
 }
 
 function _entryType(e) {
@@ -2572,11 +2750,18 @@ function openSection(sectionId) {
         const isGrafted = (et === 'Grafted Tree');
         const sellable = isGrafted ? Math.floor((e.quantity || 0) * rate / 100) : 0;
         const meta = [];
+        const _dl = (lang === 'es') ? 'es-MX' : 'en-US';
+        const _fmtD = (ds) => new Date(ds + 'T12:00:00').toLocaleDateString(_dl, {month:'short',day:'numeric',year:'2-digit'});
         // Placement (Row X[A/B/C]) shows first in meta — visible at a glance
-        if (e.row) meta.push('Row ' + e.row + (e.rowSub || ''));
+        if (e.row) meta.push((lang === 'es' ? 'Fila ' : 'Row ') + e.row + (e.rowSub || ''));
         if (e.transplant) meta.push(e.transplant);
-        if (e.graftDate) meta.push('Graft: ' + new Date(e.graftDate + 'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'}));
-        if (e.shipmentYear) meta.push('Ship: ' + e.shipmentYear);
+        if (e.graftDate) meta.push((lang === 'es' ? 'Injerto: ' : 'Graft: ') + _fmtD(e.graftDate));
+        // Show available date (stored or derived) for grafted trees
+        if (isGrafted) {
+          const av = _availableDate(e);
+          if (av) meta.push((lang === 'es' ? 'Disp: ' : 'Avail: ') + _fmtD(av));
+        }
+        if (e.shipmentYear) meta.push((lang === 'es' ? 'Envio: ' : 'Ship: ') + e.shipmentYear);
         // Label varies by type
         let scionLabel;
         if (et === 'Sleeve') scionLabel = '<em style="color:#92400E">' + t('label_empty_sleeves') + '</em>';
@@ -2651,7 +2836,7 @@ function addEntry() {
   if (!s) return;
   document.getElementById('entry-modal-title').textContent = t('modal_add_entry');
   document.getElementById('entry-modal-section').textContent = tHouse(s.house) + ' · ' + tSubhouse(s.subhouse) + ' · ' + s.sectionType;
-  ['entry-scion','entry-rootstock','entry-transplant','entry-qty','entry-graft','entry-shipment','entry-row','entry-rowsub'].forEach(id => document.getElementById(id).value = '');
+  ['entry-scion','entry-rootstock','entry-transplant','entry-qty','entry-graft','entry-shipment','entry-row','entry-rowsub','entry-transplant-date','entry-available'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('entry-takerate').value = 85;
   document.getElementById('entry-type').value = 'Grafted Tree';
   document.getElementById('modal-entry').classList.add('open');
@@ -2686,6 +2871,8 @@ function editEntry(idx) {
   document.getElementById('entry-shipment').value = e.shipmentYear || '';
   document.getElementById('entry-row').value = e.row || '';
   document.getElementById('entry-rowsub').value = e.rowSub || '';
+  document.getElementById('entry-transplant-date').value = e.transplantDate || '';
+  document.getElementById('entry-available').value = e.availableDate || '';
   document.getElementById('modal-entry').classList.add('open');
 }
 
@@ -2705,6 +2892,8 @@ async function saveEntry() {
     shipmentYear: document.getElementById('entry-shipment').value.trim(),
     row: document.getElementById('entry-row').value || '',
     rowSub: document.getElementById('entry-rowsub').value || '',
+    transplantDate: document.getElementById('entry-transplant-date').value || '',
+    availableDate: document.getElementById('entry-available').value || '',
     reservedQty: currentEntryIdx !== null && s.entries[currentEntryIdx] ? (s.entries[currentEntryIdx].reservedQty || 0) : 0,
   };
   // Sleeves don't have scion, rootstock, take rate, or graft date — clean them out
