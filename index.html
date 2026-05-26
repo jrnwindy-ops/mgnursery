@@ -315,10 +315,10 @@ table.sheet td.cell-del button:hover { opacity:1; }
       <option value="Other">Other (specify in notes)</option>
     </select>
 
-    <label class="form-label">Rootstock</label>
+    <label class="form-label" data-i18n="lbl_rootstock">Rootstock</label>
     <select class="form-input" id="entry-rootstock">
-      <option value="">— Select rootstock —</option>
-      <option value="None">None</option>
+      <option value="" data-i18n="opt_select_rootstock">— Select rootstock —</option>
+      <option value="None" data-i18n="opt_none">None</option>
       <option value="Carrizo">Carrizo</option>
       <option value="C-35">C-35</option>
       <option value="C35">C35</option>
@@ -383,35 +383,35 @@ table.sheet td.cell-del button:hover { opacity:1; }
 <div class="modal-bg" id="modal-task">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div style="font-size:18px;font-weight:800;margin-bottom:4px">Assign Task</div>
+    <div style="font-size:18px;font-weight:800;margin-bottom:4px" data-i18n="modal_assign_task">Assign Task</div>
     <div style="font-size:12px;color:var(--tx3);margin-bottom:14px" id="task-modal-section"></div>
 
-    <label class="form-label">Task</label>
-    <textarea class="form-input" id="task-input" rows="3" placeholder="Task description..."></textarea>
+    <label class="form-label" data-i18n="lbl_task">Task</label>
+    <textarea class="form-input" id="task-input" rows="3" placeholder="Task description..." data-i18n-ph="ph_task_description"></textarea>
 
-    <div style="font-size:11px;color:var(--tx3);margin-bottom:8px">Quick tasks:</div>
+    <div style="font-size:11px;color:var(--tx3);margin-bottom:8px" data-i18n="quick_tasks_label">Quick tasks:</div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
-      <span class="quick-tag" onclick="quickTask('Bud rootstock')">🌱 Bud</span>
-      <span class="quick-tag" onclick="quickTask('Graft')">🔪 Graft</span>
-      <span class="quick-tag" onclick="quickTask('Stake / Tie')">📏 Stake</span>
-      <span class="quick-tag" onclick="quickTask('Fertilize')">💧 Fertilize</span>
-      <span class="quick-tag" onclick="quickTask('Spray')">🧪 Spray</span>
-      <span class="quick-tag" onclick="quickTask('Lot count')">🔢 Count</span>
-      <span class="quick-tag" onclick="quickTask('Prune')">✂️ Prune</span>
-      <span class="quick-tag" onclick="quickTask('Pull for order')">📦 Pull</span>
-      <span class="quick-tag" onclick="quickTask('CDFA inspection')">🔍 Inspect</span>
+      <span class="quick-tag" onclick="quickTask('qtt_bud')" data-i18n="qt_bud">🌱 Bud</span>
+      <span class="quick-tag" onclick="quickTask('qtt_graft')" data-i18n="qt_graft">🔪 Graft</span>
+      <span class="quick-tag" onclick="quickTask('qtt_stake')" data-i18n="qt_stake">📏 Stake</span>
+      <span class="quick-tag" onclick="quickTask('qtt_fertilize')" data-i18n="qt_fertilize">💧 Fertilize</span>
+      <span class="quick-tag" onclick="quickTask('qtt_spray')" data-i18n="qt_spray">🧪 Spray</span>
+      <span class="quick-tag" onclick="quickTask('qtt_count')" data-i18n="qt_count">🔢 Count</span>
+      <span class="quick-tag" onclick="quickTask('qtt_prune')" data-i18n="qt_prune">✂️ Prune</span>
+      <span class="quick-tag" onclick="quickTask('qtt_pull')" data-i18n="qt_pull">📦 Pull</span>
+      <span class="quick-tag" onclick="quickTask('qtt_inspect')" data-i18n="qt_inspect">🔍 Inspect</span>
     </div>
 
-    <label class="form-label">Scheduled Date (optional)</label>
+    <label class="form-label" data-i18n="lbl_scheduled_date">Scheduled Date (optional)</label>
     <input class="form-input" id="task-date" type="date">
 
-    <label class="form-label">Assignee (optional)</label>
-    <input class="form-input" id="task-assignee" type="text" placeholder="e.g. Abram">
+    <label class="form-label" data-i18n="lbl_assignee">Assignee (optional)</label>
+    <input class="form-input" id="task-assignee" type="text" placeholder="e.g. Abram" data-i18n-ph="ph_assignee">
 
     <div class="form-actions">
-      <button class="btn-cancel" onclick="closeTaskModal()">Cancel</button>
-      <button class="btn-submit" onclick="submitTask()">Save Task</button>
-      <button class="btn-submit" onclick="submitTaskAndSendWA()" style="background:#25D366;margin-left:6px">Save &amp; Send WhatsApp</button>
+      <button class="btn-cancel" onclick="closeTaskModal()" data-i18n="btn_cancel">Cancel</button>
+      <button class="btn-submit" onclick="submitTask()" data-i18n="btn_save_task">Save Task</button>
+      <button class="btn-submit" onclick="submitTaskAndSendWA()" style="background:#25D366;margin-left:6px" data-i18n="btn_save_wa">Save &amp; Send WhatsApp</button>
     </div>
   </div>
 </div>
@@ -1433,6 +1433,7 @@ const T_DICT = {
     btn_save_entry: 'Save Entry',
     // Task modal
     lbl_task: 'Task',
+    modal_assign_task: 'Assign Task',
     ph_task_description: 'Task description...',
     quick_tasks_label: 'Quick tasks:',
     qt_bud: '🌱 Bud',
@@ -1444,6 +1445,15 @@ const T_DICT = {
     qt_prune: '✂️ Prune',
     qt_pull: '📦 Pull',
     qt_inspect: '🔍 Inspect',
+    qtt_bud: 'Bud rootstock',
+    qtt_graft: 'Graft',
+    qtt_stake: 'Stake / Tie',
+    qtt_fertilize: 'Fertilize',
+    qtt_spray: 'Spray',
+    qtt_count: 'Lot count',
+    qtt_prune: 'Prune',
+    qtt_pull: 'Pull for order',
+    qtt_inspect: 'CDFA inspection',
     lbl_scheduled_date: 'Scheduled Date (optional)',
     lbl_assignee: 'Assignee (optional)',
     ph_assignee: 'e.g. Abram',
@@ -1480,6 +1490,12 @@ const T_DICT = {
     alert_task_removed: 'This task was removed.',
     confirm_delete_entry: 'Remove this variety entry?',
     confirm_delete_task: 'Delete this task?',
+    confirm_mark_complete: 'Mark this task as complete?',
+    confirm_delete_row: 'Delete this row? ',
+    alert_could_not_save: 'Could not save: ',
+    alert_task_complete: 'Task marked complete ✓',
+    alert_something_wrong: 'Something went wrong. Try again from the Tasks tab.',
+    prompt_add_house: 'Add to which house? (e.g. H1-North3 or H2-South5)\n\nFormat: H1-North1 through H1-South8, or H2-North1 through H2-South20',
     // Sheet view
     sheet_filter_ph: 'Filter rows...',
     sheet_saving: '● Saving...',
@@ -1563,6 +1579,7 @@ const T_DICT = {
     btn_save_entry: 'Guardar Variedad',
     // Task modal
     lbl_task: 'Tarea',
+    modal_assign_task: 'Asignar Tarea',
     ph_task_description: 'Descripcion de la tarea...',
     quick_tasks_label: 'Tareas rapidas:',
     qt_bud: '🌱 Yema',
@@ -1574,6 +1591,15 @@ const T_DICT = {
     qt_prune: '✂️ Podar',
     qt_pull: '📦 Sacar',
     qt_inspect: '🔍 Inspeccionar',
+    qtt_bud: 'Injertar yema en portainjerto',
+    qtt_graft: 'Injertar',
+    qtt_stake: 'Estacar / Amarrar',
+    qtt_fertilize: 'Fertilizar',
+    qtt_spray: 'Fumigar',
+    qtt_count: 'Conteo de lote',
+    qtt_prune: 'Podar',
+    qtt_pull: 'Sacar para pedido',
+    qtt_inspect: 'Inspeccion CDFA',
     lbl_scheduled_date: 'Fecha Programada (opcional)',
     lbl_assignee: 'Asignado a (opcional)',
     ph_assignee: 'ej. Abram',
@@ -1610,6 +1636,12 @@ const T_DICT = {
     alert_task_removed: 'Esta tarea fue eliminada.',
     confirm_delete_entry: '¿Eliminar esta variedad?',
     confirm_delete_task: '¿Eliminar esta tarea?',
+    confirm_mark_complete: '¿Marcar esta tarea como completada?',
+    confirm_delete_row: '¿Eliminar esta fila? ',
+    alert_could_not_save: 'No se pudo guardar: ',
+    alert_task_complete: 'Tarea marcada como completada ✓',
+    alert_something_wrong: 'Algo salio mal. Intente de nuevo desde la pestana de Tareas.',
+    prompt_add_house: '¿A cual casa agregar? (ej. H1-North3 o H2-South5)\n\nFormato: H1-North1 a H1-South8, o H2-North1 a H2-South20',
     // Sheet view
     sheet_filter_ph: 'Filtrar filas...',
     sheet_saving: '● Guardando...',
@@ -2228,7 +2260,7 @@ function renderTasksView() {
 
 async function completeTaskFromList(rowId, sectionId, encodedTask) {
   const taskLabel = decodeURIComponent(encodedTask);
-  if (!confirm('Mark this task as complete?')) return;
+  if (!confirm(t('confirm_mark_complete'))) return;
   // Update cloud row to status=completed
   try {
     await sb.from('nursery_tasks').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', rowId);
@@ -2575,20 +2607,20 @@ function setSaveStatus(state) {
   if (!el) return;
   el.classList.remove('saving', 'saved');
   if (state === 'saving') {
-    el.textContent = '● Saving...';
+    el.textContent = t('sheet_saving');
     el.classList.add('saving');
   } else if (state === 'saved') {
-    el.textContent = '✓ All changes saved';
+    el.textContent = t('sheet_saved');
     el.classList.add('saved');
     setTimeout(() => {
-      if (el.textContent === '✓ All changes saved') el.textContent = 'Ready · Click any cell to edit';
+      if (el.textContent === t('sheet_saved')) el.textContent = t('sheet_ready');
     }, 2000);
   }
 }
 
 function addSheetRow() {
   // Prompt for which house to add to
-  const houseId = prompt('Add to which house? (e.g. H1-North3 or H2-South5)\n\nFormat: H1-North1 through H1-South8, or H2-North1 through H2-South20');
+  const houseId = prompt(t('prompt_add_house'));
   if (!houseId) return;
   const s = SECTIONS[houseId.trim()];
   if (!s) { alert(t('alert_house_not_found')); return; }
@@ -2607,7 +2639,7 @@ async function deleteSheetEntry(sectionId, entryIdx) {
   if (!s || !s.entries[entryIdx]) return;
   const e = s.entries[entryIdx];
   const label = (e.scion || 'empty') + '/' + (e.rootstock || 'none') + ' (' + (e.quantity || 0) + ')';
-  if (!confirm('Delete this row? ' + label)) return;
+  if (!confirm(t('confirm_delete_row') + label)) return;
   s.entries.splice(entryIdx, 1);
   await saveSectionToCloud(s);
   renderHome();
@@ -2683,7 +2715,7 @@ function renderSectionHistory(sectionId) {
   const container = document.getElementById(containerId);
   if (!container) return;
   if (!rows || rows.length === 0) {
-    container.innerHTML = '<div style="padding:14px 12px;color:#9CA3AF;font-size:13px;text-align:center">No history yet for this section</div>';
+    container.innerHTML = '<div style="padding:14px 12px;color:#9CA3AF;font-size:13px;text-align:center">' + t('no_history') + '</div>';
     return;
   }
   // Render each row as a compact history item
@@ -2949,7 +2981,11 @@ function openTaskModal() {
 }
 
 function closeTaskModal() { document.getElementById('modal-task').classList.remove('open'); }
-function quickTask(text) { document.getElementById('task-input').value = text; }
+function quickTask(key) {
+  // Accept a translation key (qtt_*) and resolve to the current language; fall back to literal text.
+  const text = (typeof t === 'function' && /^qtt_/.test(key)) ? t(key) : key;
+  document.getElementById('task-input').value = text;
+}
 
 async function submitTask() {
   await _submitTaskCore(false);
@@ -3027,7 +3063,7 @@ async function _submitTaskCore(sendWhatsApp) {
 }
 
 async function deleteTask(idx) {
-  if (!confirm('Remove this task?')) return;
+  if (!confirm(t('confirm_delete_task'))) return;
   const s = SECTIONS[currentSectionId];
   if (!s) return;
   const task = s.tasks[idx];
@@ -3358,7 +3394,7 @@ async function _promptCompleteFromLink(taskId, sectionId) {
     // Pending — ask for confirmation
     const dateStr = data.scheduled_date ? '\nDate: ' + data.scheduled_date : '';
     const assigneeStr = data.assignee ? '\nFor: @' + data.assignee : '';
-    const ok = confirm('Mark this task as complete?\n\n"' + data.task + '"' + dateStr + assigneeStr);
+    const ok = confirm(t('confirm_mark_complete') + '\n\n"' + data.task + '"' + dateStr + assigneeStr);
     if (!ok) {
       history.replaceState(null, '', window.location.pathname + '#section=' + encodeURIComponent(sectionId));
       return;
@@ -3369,7 +3405,7 @@ async function _promptCompleteFromLink(taskId, sectionId) {
       completed_at: new Date().toISOString(),
     }).eq('id', taskId);
     if (upd.error) {
-      alert('Could not save: ' + upd.error.message);
+      alert(t('alert_could_not_save') + upd.error.message);
       return;
     }
     // Remove from local memory
@@ -3387,12 +3423,12 @@ async function _promptCompleteFromLink(taskId, sectionId) {
     if (typeof _loadNurseryTaskRows === 'function') await _loadNurseryTaskRows();
     // Clear the hash and reopen the section
     history.replaceState(null, '', window.location.pathname + '#section=' + encodeURIComponent(sectionId));
-    alert('Task marked complete ✓');
+    alert(t('alert_task_complete'));
     if (sectionId && SECTIONS[sectionId]) openSection(sectionId);
     else renderHome();
   } catch(e) {
     console.warn('_promptCompleteFromLink exception:', e);
-    alert('Something went wrong. Try again from the Tasks tab.');
+    alert(t('alert_something_wrong'));
   }
 }
 
