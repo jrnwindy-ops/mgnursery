@@ -216,6 +216,7 @@ table.sheet td.cell-del button:hover { opacity:1; }
       </div>
       <button class="action-btn" onclick="exportBackup()" title="Download backup file" data-i18n="btn_backup">↓ Backup</button>
       <button class="action-btn" onclick="restoreFromBackup()" title="Restore from backup file" data-i18n="btn_restore">↑ Restore</button>
+      <button class="action-btn" onclick="exportXlsx()" title="Export to Excel" data-i18n="btn_excel">📊 Excel</button>
       <button class="action-btn" onclick="exportReport()" data-i18n="btn_report">📄 Report</button>
     </div>
   </div>
@@ -1378,6 +1379,7 @@ const T_DICT = {
     btn_backup: '↓ Backup',
     btn_restore: '↑ Restore',
     btn_report: '📄 Report',
+    btn_excel: '📊 Excel',
     search_placeholder: 'Search variety, rootstock, house...',
     // View tabs
     view_list: '📋 List',
@@ -1507,6 +1509,7 @@ const T_DICT = {
     btn_backup: '↓ Respaldo',
     btn_restore: '↑ Restaurar',
     btn_report: '📄 Reporte',
+    btn_excel: '📊 Excel',
     search_placeholder: 'Buscar variedad, portainjerto, casa...',
     // View tabs
     view_list: '📋 Lista',
@@ -3130,6 +3133,101 @@ async function restoreFromBackup() {
     }
   };
   fileInput.click();
+}
+
+// ─── EXCEL EXPORT ────────────────────────────────────────────────────────────
+// Lazy-loads SheetJS on first use so the library isn't downloaded unless needed.
+let _xlsxLoading = null;
+function _loadSheetJS() {
+  if (window.XLSX) return Promise.resolve(window.XLSX);
+  if (_xlsxLoading) return _xlsxLoading;
+  _xlsxLoading = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js';
+    s.onload = () => window.XLSX ? resolve(window.XLSX) : reject(new Error('XLSX failed to load'));
+    s.onerror = () => reject(new Error('Could not load the Excel library. Check your internet connection.'));
+    document.head.appendChild(s);
+  });
+  return _xlsxLoading;
+}
+
+async function exportXlsx() {
+  let XLSX;
+  try {
+    XLSX = await _loadSheetJS();
+  } catch (e) {
+    alert(e.message || 'Could not load the Excel library.');
+    return;
+  }
+
+  // TAB 1: Summary
+  const stats = calcStats();
+  const activeSections = Object.values(SECTIONS).filter(s => (s.entries || []).length > 0).length;
+  const sumRows = [
+    ['M&G Nursery — Inventory Export'],
+    ['Generated', new Date().toLocaleString('en-US',{month:'long',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'})],
+    [],
+    ['Metric', 'Value'],
+    ['Total Planted', stats.totalQty],
+    ['Total Sellable', stats.sellable],
+    ['Seedlings', stats.seedlings],
+    ['Sleeves (empty)', stats.sleeves],
+    ['Reserved', stats.reserved],
+    ['Active Sections', activeSections + ' / 56'],
+  ];
+
+  // TAB 2: Inventory (every entry)
+  const invRows = [['House','Sub-house','Section Type','Row','Type','Scion','Rootstock','Quantity','Take Rate %','Sellable','Reserved','Transplant Date','Graft Date','Available Date','Shipment Year','Notes']];
+  Object.values(SECTIONS).forEach(s => {
+    (s.entries || []).forEach(e => {
+      const t = _entryType(e);
+      const qty = e.quantity || 0;
+      const rate = e.takeRate !== undefined ? e.takeRate : 85;
+      const sellable = t === 'Grafted Tree' ? Math.floor(qty * rate / 100) : 0;
+      invRows.push([
+        s.house, s.subhouse, s.sectionType,
+        (e.row || '') + (e.rowSub || ''),
+        t, e.scion || '', e.rootstock || '',
+        qty, rate, sellable, e.reservedQty || 0,
+        e.transplantDate || '', e.graftDate || '', _availableDate(e),
+        e.shipmentYear || '', e.transplant || ''
+      ]);
+    });
+  });
+
+  // TAB 3: Forecast (grafted trees becoming sellable, by month)
+  const buckets = {};
+  let unscheduled = 0;
+  Object.values(SECTIONS).forEach(s => {
+    (s.entries || []).forEach(e => {
+      if (_entryType(e) !== 'Grafted Tree') return;
+      const qty = e.quantity || 0;
+      if (!qty) return;
+      const rate = e.takeRate !== undefined ? e.takeRate : 85;
+      const sellable = Math.floor(qty * rate / 100);
+      const av = _availableDate(e);
+      if (!av) { unscheduled += sellable; return; }
+      const ym = av.slice(0, 7);
+      buckets[ym] = (buckets[ym] || 0) + sellable;
+    });
+  });
+  const fcRows = [['Available Month', 'Sellable Trees']];
+  Object.keys(buckets).sort().forEach(ym => fcRows.push([ym, buckets[ym]]));
+  if (unscheduled > 0) fcRows.push(['No date set', unscheduled]);
+
+  // Build workbook
+  const wb = XLSX.utils.book_new();
+  const wsSum = XLSX.utils.aoa_to_sheet(sumRows);
+  wsSum['!cols'] = [{wch:20},{wch:30}];
+  XLSX.utils.book_append_sheet(wb, wsSum, 'Summary');
+  const wsInv = XLSX.utils.aoa_to_sheet(invRows);
+  wsInv['!cols'] = [{wch:10},{wch:10},{wch:16},{wch:6},{wch:13},{wch:16},{wch:14},{wch:10},{wch:11},{wch:10},{wch:9},{wch:14},{wch:12},{wch:14},{wch:13},{wch:18}];
+  XLSX.utils.book_append_sheet(wb, wsInv, 'Inventory');
+  const wsFc = XLSX.utils.aoa_to_sheet(fcRows);
+  wsFc['!cols'] = [{wch:18},{wch:14}];
+  XLSX.utils.book_append_sheet(wb, wsFc, 'Forecast');
+
+  XLSX.writeFile(wb, 'mg_nursery_inventory_' + new Date().toISOString().split('T')[0] + '.xlsx');
 }
 
 function exportReport() {
