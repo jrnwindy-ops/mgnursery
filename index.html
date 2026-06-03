@@ -346,7 +346,7 @@ table.sheet td.cell-del button:hover { opacity:1; }
       </div>
     </div>
 
-    <!-- LIFECYCLE DATES: Transplant → (+60d) Graft → (+300d) Available -->
+    <!-- LIFECYCLE DATES: Transplant → (+75d) Budding → (+300d) Available -->
     <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:12px;margin-top:6px">
       <div style="font-size:11px;font-weight:700;color:#2D6A4F;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px" data-i18n="lifecycle_header">🌱 Lifecycle Dates (auto-scheduled)</div>
       <div class="form-row">
@@ -369,7 +369,7 @@ table.sheet td.cell-del button:hover { opacity:1; }
           <input class="form-input" id="entry-shipment" type="text" placeholder="e.g. 2026" data-i18n-ph="ph_year_example">
         </div>
       </div>
-      <div style="font-size:10px;color:#6B7280;margin-top:6px;font-style:italic" data-i18n="lifecycle_hint">Transplant + 60 days = Graft · Graft + 300 days = Available. Edit any date to override.</div>
+      <div style="font-size:10px;color:#6B7280;margin-top:6px;font-style:italic" data-i18n="lifecycle_hint">Transplant + 75 days = Budding · Graft + 300 days = Available. Edit any date to override.</div>
     </div>
 
     <div class="form-actions">
@@ -1427,7 +1427,7 @@ const T_DICT = {
     lbl_transplant_date: 'Transplant Date',
     lbl_available_date: 'Available Date',
     lifecycle_header: '🌱 Lifecycle Dates (auto-scheduled)',
-    lifecycle_hint: 'Transplant + 60 days = Graft · Graft + 300 days = Available. Edit any date to override.',
+    lifecycle_hint: 'Transplant + 75 days = Budding · Graft + 300 days = Available. Edit any date to override.',
     ph_year_example: 'e.g. 2026',
     btn_cancel: 'Cancel',
     btn_save_entry: 'Save Entry',
@@ -1573,7 +1573,7 @@ const T_DICT = {
     lbl_transplant_date: 'Fecha de Trasplante',
     lbl_available_date: 'Fecha Disponible',
     lifecycle_header: '🌱 Fechas del Ciclo (programadas automaticamente)',
-    lifecycle_hint: 'Trasplante + 60 dias = Injerto · Injerto + 300 dias = Disponible. Edite cualquier fecha para cambiar.',
+    lifecycle_hint: 'Trasplante + 75 dias = Injerto · Injerto + 300 dias = Disponible. Edite cualquier fecha para cambiar.',
     ph_year_example: 'ej. 2026',
     btn_cancel: 'Cancelar',
     btn_save_entry: 'Guardar Variedad',
@@ -2024,7 +2024,7 @@ function renderHome() {
 
 // ── FORECAST VIEW (Available-by-month rollup) ─────────────────────────────────
 // Groups all Grafted-Tree entries by their available-to-sell month.
-// "Available date" is the stored availableDate, or derived: graft+300, or transplant+60+300.
+// "Available date" is the stored availableDate, or derived: graft+300, or transplant+75+300.
 // Shows sellable trees (qty × takeRate) since that's what's actually for sale.
 function renderForecastView() {
   const buckets = {};   // 'YYYY-MM' -> { sellable, raw, count }
@@ -2319,8 +2319,8 @@ function renderListView(sections) {
 }
 
 // ─── LIFECYCLE DATE SCHEDULING ───────────────────────────────────────────────
-// Transplant + 60d = Graft date.  Graft + 300d = Available date.
-const DAYS_TRANSPLANT_TO_GRAFT = 60;
+// Transplant + 75d = Budding window.  Graft + 300d = Available date. (Updated per grower input 6/3/2026)
+const DAYS_TRANSPLANT_TO_GRAFT = 75;
 const DAYS_GRAFT_TO_AVAILABLE = 300;
 
 function _addDays(dateStr, days) {
