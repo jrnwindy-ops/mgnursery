@@ -1771,6 +1771,8 @@ async function loadFromCloud() {
       });
     }
     
+    // One-time take-rate standardization (85 → 70) to match the CRM default
+    await migrateTakeRates85to70();
     // Also load Phase 2 variety-pool reservations
     loadReservationsPool().catch(e => console.warn('loadReservationsPool error:', e));
     // Load task rows (for assignee/rowId lookup in Tasks view)
@@ -1781,6 +1783,42 @@ async function loadFromCloud() {
   } catch(e) {
     console.warn('Nursery cloud load failed:', e);
   }
+}
+
+// ── ONE-TIME TAKE-RATE STANDARDIZATION (85 → 70) ───────────────────────────
+// Rewrites any take rate of EXACTLY 85 to 70 (section-level and per-entry) so the
+// Tracker matches the CRM default (INV_CULL = 0.70). Runs once per device, guarded
+// by a localStorage flag, and only when online so the change is persisted to cloud.
+// Values other than 85 (incl. custom rates and existing 70s) are left untouched.
+async function migrateTakeRates85to70() {
+  try {
+    if (localStorage.getItem('mg_takerate_migrated_v1')) return;
+    if (!cloudOk || !sb) return;  // defer until online; flag stays unset so it retries next load
+    const changed = [];
+    Object.values(SECTIONS).forEach(s => {
+      let c = false;
+      if (Number(s.takeRate) === 85) { s.takeRate = 70; c = true; }
+      (s.entries || []).forEach(e => { if (Number(e.takeRate) === 85) { e.takeRate = 70; c = true; } });
+      if (c) changed.push(s);
+    });
+    if (changed.length === 0) { localStorage.setItem('mg_takerate_migrated_v1', new Date().toISOString()); return; }
+    const rows = changed.map(s => ({
+      section_id: s.id, house: s.house, subhouse: s.subhouse, side: s.side,
+      section_idx: s.sectionIdx, section_type: s.sectionType,
+      entries: s.entries, take_rate: s.takeRate, updated_at: new Date().toISOString()
+    }));
+    let ok = true;
+    for (let i = 0; i < rows.length; i += 20) {
+      const { error } = await sb.from('nursery_sections_v2').upsert(rows.slice(i, i + 20), { onConflict: 'section_id' });
+      if (error) { ok = false; console.warn('[MG] take-rate migration chunk error:', error); }
+    }
+    if (ok) {
+      localStorage.setItem('mg_takerate_migrated_v1', new Date().toISOString());
+      console.log('[MG] Take-rate migration: standardized ' + changed.length + ' sections (85→70), saved to cloud');
+    } else {
+      console.warn('[MG] take-rate migration incomplete; will retry on next load');
+    }
+  } catch (e) { console.warn('[MG] take-rate migration error:', e); }
 }
 
 // ── RESERVATIONS POOL (Phase 2: CRM↔Nursery integration) ───────────────────
