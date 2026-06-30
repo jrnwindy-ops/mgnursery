@@ -342,7 +342,7 @@ table.sheet td.cell-del button:hover { opacity:1; }
       </div>
       <div>
         <label class="form-label" data-i18n="lbl_take_rate">Take Rate %</label>
-        <input class="form-input" id="entry-takerate" type="number" min="0" max="100" value="85">
+        <input class="form-input" id="entry-takerate" type="number" min="0" max="100" value="70">
       </div>
     </div>
 
@@ -1812,7 +1812,7 @@ async function seedCloudFromLocal() {
     section_idx: s.sectionIdx,
     section_type: s.sectionType,
     entries: s.entries || [],
-    take_rate: s.takeRate || 85,
+    take_rate: s.takeRate || 70,
     updated_at: new Date().toISOString(),
   }));
   // Batch insert in chunks of 20 to be safe
@@ -1937,7 +1937,7 @@ function calcStats() {
         } else {
           // Grafted Tree — current behavior
           planted += qty;
-          const rate = e.takeRate !== undefined ? e.takeRate : 85;
+          const rate = e.takeRate !== undefined ? e.takeRate : 70;
           sellable += Math.floor(qty * rate / 100);
           reserved += (e.reservedQty || 0);
         }
@@ -2038,7 +2038,7 @@ function renderForecastView() {
       if (_entryType(e) !== 'Grafted Tree') return;
       const qty = e.quantity || 0;
       if (qty === 0) return;
-      const rate = e.takeRate !== undefined ? e.takeRate : 85;
+      const rate = e.takeRate !== undefined ? e.takeRate : 70;
       const sellable = Math.floor(qty * rate / 100);
       totalSellable += sellable;
       const avail = _availableDate(e);
@@ -2381,7 +2381,7 @@ function buildCard(s) {
   const entries = s.entries || [];
   const isEmpty = entries.length === 0;
   const totalQty = entries.reduce((sum, e) => sum + (e.quantity || 0), 0);
-  const sellable = entries.reduce((sum, e) => sum + Math.floor((e.quantity || 0) * (e.takeRate !== undefined ? e.takeRate : 85) / 100), 0);
+  const sellable = entries.reduce((sum, e) => sum + Math.floor((e.quantity || 0) * (e.takeRate !== undefined ? e.takeRate : 70) / 100), 0);
   const visible = entries.slice(0, 3);
   const more = entries.length - 3;
   const varHtml = isEmpty
@@ -2476,7 +2476,7 @@ function renderSheetView(filteredSections) {
 
   // Totals row
   const tQty = rows.reduce((sum, r) => sum + (r.entry.quantity || 0), 0);
-  const tSellable = rows.reduce((sum, r) => sum + Math.floor((r.entry.quantity || 0) * (r.entry.takeRate !== undefined ? r.entry.takeRate : 85) / 100), 0);
+  const tSellable = rows.reduce((sum, r) => sum + Math.floor((r.entry.quantity || 0) * (r.entry.takeRate !== undefined ? r.entry.takeRate : 70) / 100), 0);
   const tReserved = rows.reduce((sum, r) => sum + (r.entry.reservedQty || 0), 0);
 
   const cls = (s) => {
@@ -2490,7 +2490,7 @@ function renderSheetView(filteredSections) {
 
   const rowsHtml = rows.map(r => {
     const s = r.section, e = r.entry, idx = r.entryIdx;
-    const rate = e.takeRate !== undefined ? e.takeRate : 85;
+    const rate = e.takeRate !== undefined ? e.takeRate : 70;
     const sellable = Math.floor((e.quantity || 0) * rate / 100);
     const k = s.id + ':' + idx;
     // Build selects with current value pre-selected
@@ -2575,7 +2575,7 @@ function updateEntry(sectionId, entryIdx, field, value) {
   const row = document.querySelector('tr[data-k="' + sectionId + ':' + entryIdx + '"]');
   if (row) {
     const e = s.entries[entryIdx];
-    const rate = e.takeRate !== undefined ? e.takeRate : 85;
+    const rate = e.takeRate !== undefined ? e.takeRate : 70;
     const sellable = Math.floor((e.quantity || 0) * rate / 100);
     const sellCell = row.querySelector('[data-sellable]');
     if (sellCell) sellCell.textContent = sellable.toLocaleString();
@@ -2624,7 +2624,7 @@ function addSheetRow() {
   if (!houseId) return;
   const s = SECTIONS[houseId.trim()];
   if (!s) { alert(t('alert_house_not_found')); return; }
-  s.entries.push({ scion:'', rootstock:'', transplant:'', quantity:0, takeRate:85, graftDate:'', shipmentYear:'', reservedQty:0 });
+  s.entries.push({ scion:'', rootstock:'', transplant:'', quantity:0, takeRate:70, graftDate:'', shipmentYear:'', reservedQty:0 });
   saveSectionToCloud(s);
   renderHome();
   // Scroll to the new row at top
@@ -2650,7 +2650,7 @@ function exportCsv() {
   const rows = [headers.join(',')];
   Object.values(SECTIONS).forEach(s => {
     (s.entries || []).forEach(e => {
-      const rate = e.takeRate !== undefined ? e.takeRate : 85;
+      const rate = e.takeRate !== undefined ? e.takeRate : 70;
       const sellable = Math.floor((e.quantity || 0) * rate / 100);
       const cells = [
         s.house, s.subhouse, s.sectionType,
@@ -2760,7 +2760,7 @@ function openSection(sectionId) {
   }, 0);
   const totalSellable = entries.reduce((sum, e) => {
     if (_entryType(e) !== 'Grafted Tree') return sum;
-    return sum + Math.floor((e.quantity || 0) * (e.takeRate !== undefined ? e.takeRate : 85) / 100);
+    return sum + Math.floor((e.quantity || 0) * (e.takeRate !== undefined ? e.takeRate : 70) / 100);
   }, 0);
   const totalReserved = entries.reduce((sum, e) => sum + (e.reservedQty || 0), 0);
 
@@ -2780,7 +2780,7 @@ function openSection(sectionId) {
       indexedEntries.map(({e, originalIdx}) => {
         const i = originalIdx;
         const et = _entryType(e);
-        const rate = e.takeRate !== undefined ? e.takeRate : 85;
+        const rate = e.takeRate !== undefined ? e.takeRate : 70;
         // Sleeves & Seedlings have no sellable count
         const isGrafted = (et === 'Grafted Tree');
         const sellable = isGrafted ? Math.floor((e.quantity || 0) * rate / 100) : 0;
@@ -2901,7 +2901,7 @@ function editEntry(idx) {
   document.getElementById('entry-rootstock').value = e.rootstock || '';
   document.getElementById('entry-transplant').value = e.transplant || '';
   document.getElementById('entry-qty').value = e.quantity || '';
-  document.getElementById('entry-takerate').value = e.takeRate !== undefined ? e.takeRate : 85;
+  document.getElementById('entry-takerate').value = e.takeRate !== undefined ? e.takeRate : 70;
   document.getElementById('entry-graft').value = e.graftDate || '';
   document.getElementById('entry-shipment').value = e.shipmentYear || '';
   document.getElementById('entry-row').value = e.row || '';
@@ -2922,7 +2922,7 @@ async function saveEntry() {
     rootstock: document.getElementById('entry-rootstock').value,
     transplant: document.getElementById('entry-transplant').value.trim(),
     quantity: parseInt(document.getElementById('entry-qty').value) || 0,
-    takeRate: parseInt(document.getElementById('entry-takerate').value) || 85,
+    takeRate: parseInt(document.getElementById('entry-takerate').value) || 70,
     graftDate: document.getElementById('entry-graft').value || '',
     shipmentYear: document.getElementById('entry-shipment').value.trim(),
     row: document.getElementById('entry-row').value || '',
@@ -3089,7 +3089,7 @@ function exportBackup() {
       section_idx: s.sectionIdx,
       section_type: s.sectionType,
       entries: s.entries || [],
-      take_rate: s.takeRate || 85,
+      take_rate: s.takeRate || 70,
       tasks: s.tasks || [],
     }));
     const data = {
@@ -3148,7 +3148,7 @@ async function restoreFromBackup() {
           section_idx: s.section_idx || 1,
           section_type: s.section_type || 'Tree House',
           entries: s.entries || [],
-          take_rate: s.take_rate || 85,
+          take_rate: s.take_rate || 70,
           updated_at: new Date().toISOString(),
         };
         try {
@@ -3218,7 +3218,7 @@ async function exportXlsx() {
     (s.entries || []).forEach(e => {
       const t = _entryType(e);
       const qty = e.quantity || 0;
-      const rate = e.takeRate !== undefined ? e.takeRate : 85;
+      const rate = e.takeRate !== undefined ? e.takeRate : 70;
       const sellable = t === 'Grafted Tree' ? Math.floor(qty * rate / 100) : 0;
       invRows.push([
         s.house, s.subhouse, s.sectionType,
@@ -3239,7 +3239,7 @@ async function exportXlsx() {
       if (_entryType(e) !== 'Grafted Tree') return;
       const qty = e.quantity || 0;
       if (!qty) return;
-      const rate = e.takeRate !== undefined ? e.takeRate : 85;
+      const rate = e.takeRate !== undefined ? e.takeRate : 70;
       const sellable = Math.floor(qty * rate / 100);
       const av = _availableDate(e);
       if (!av) { unscheduled += sellable; return; }
@@ -3274,7 +3274,7 @@ function exportReport() {
     (s.entries || []).forEach(e => {
       const key = (e.scion || 'No scion') + ' / ' + (e.rootstock || 'No rootstock');
       if (!byVariety[key]) byVariety[key] = { qty:0, sellable:0, reserved:0, locations:[] };
-      const rate = e.takeRate !== undefined ? e.takeRate : 85;
+      const rate = e.takeRate !== undefined ? e.takeRate : 70;
       byVariety[key].qty += e.quantity || 0;
       byVariety[key].sellable += Math.floor((e.quantity || 0) * rate / 100);
       byVariety[key].reserved += e.reservedQty || 0;
@@ -3291,7 +3291,7 @@ function exportReport() {
   ).join('');
   const houseRows = Object.values(SECTIONS).filter(s => s.entries && s.entries.length > 0).map(s => {
     const totalQty = s.entries.reduce((sum, e) => sum + (e.quantity || 0), 0);
-    const sellable = s.entries.reduce((sum, e) => sum + Math.floor((e.quantity || 0) * (e.takeRate !== undefined ? e.takeRate : 85) / 100), 0);
+    const sellable = s.entries.reduce((sum, e) => sum + Math.floor((e.quantity || 0) * (e.takeRate !== undefined ? e.takeRate : 70) / 100), 0);
     const varieties = s.entries.map(e => (e.scion || '—') + (e.rootstock ? '/' + e.rootstock : '')).slice(0,5).join(', ') + (s.entries.length > 5 ? ' …' : '');
     return '<tr><td style="padding:9px 12px;font-size:13px;border-bottom:1px solid #F3F4F6;font-weight:600">' + s.house + ' · ' + s.subhouse + '</td>' +
       '<td style="padding:9px 12px;font-size:11px;color:#6B7280;border-bottom:1px solid #F3F4F6">' + s.sectionType + '</td>' +
