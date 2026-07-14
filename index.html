@@ -384,6 +384,28 @@ table.sheet td.cell-del button:hover { opacity:1; }
   </div>
 </div>
 
+<!-- RENAME VARIETY MODAL (global rename across all houses) #3 -->
+<div class="modal-bg" id="modal-rename">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div style="font-size:18px;font-weight:800;margin-bottom:4px">Rename Variety Everywhere</div>
+    <div style="font-size:12px;color:var(--tx3);margin-bottom:14px">Renames a variety on every entry that uses it, across all houses. Saves automatically.</div>
+
+    <label class="form-label">Variety to rename</label>
+    <select class="form-input" id="rename-old" onchange="onRenameOldChange()"></select>
+
+    <label class="form-label" style="margin-top:10px">New name</label>
+    <input class="form-input" id="rename-new" type="text" placeholder="e.g. Shiranui" oninput="onRenameOldChange()">
+
+    <div id="rename-impact" style="font-size:12px;color:var(--tx2);margin-top:10px;min-height:18px"></div>
+
+    <div class="form-actions">
+      <button class="btn-cancel" onclick="closeRenameModal()">Cancel</button>
+      <button class="btn-submit" id="rename-confirm-btn" onclick="confirmRename()">Rename Everywhere</button>
+    </div>
+  </div>
+</div>
+
 <!-- TASK MODAL -->
 <div class="modal-bg" id="modal-task">
   <div class="modal">
@@ -2509,6 +2531,75 @@ let _pendingSaves = new Set();
 const SCION_OPTIONS = ['','None','Tango','Page','W. Murcott','W. Murcott Mandarin','Nules Clementine','Fisher','Star Ruby','Eureka','Lisbon','Washington','Parent Washington','P. Wash','Fukumoto','Autumn Gold','A. Gold','Powell','Gillette','Late Lane','Olinda','Palestine Sweet Lime','Shiranui','DaisySL','Valencia','Navel','Paige','Australian Finger Lime','Summer Gold Mandarin','Cara Cara','Chandler Pummelo','Persian','Sweet Lime','Other'];
 const ROOTSTOCK_OPTIONS = ['','None','Carrizo','C-35','C35','Rich 16','Rich 16-6','Rubidoux','Rubi','Trifoliate','Macrophylla','Atwood','Other'];
 
+// ── #3 · Global variety rename ─────────────────────────────────────────────
+// Every distinct scion actually present in the data, unioned with the base list,
+// so renamed/new variety names always appear in the dropdowns.
+function _allScions(){
+  const set = new Set(SCION_OPTIONS);
+  Object.values(SECTIONS).forEach(s => (s.entries||[]).forEach(e => { if(e.scion) set.add(e.scion); }));
+  const base = ['','None'];
+  const rest = [...set].filter(v => !base.includes(v) && v !== 'Other').sort((a,b)=>a.localeCompare(b));
+  return [...base, ...rest, 'Other'];
+}
+// How many entries use each scion (for the rename picker + impact preview).
+function _scionCounts(){
+  const counts = {};
+  Object.values(SECTIONS).forEach(s => (s.entries||[]).forEach(e => { const v=e.scion||''; if(v && v!=='None') counts[v]=(counts[v]||0)+1; }));
+  return counts;
+}
+// Rename a variety on EVERY entry that uses it, across all houses, then persist.
+async function renameVariety(oldName, newName){
+  oldName=(oldName||'').trim(); newName=(newName||'').trim();
+  if(!oldName || !newName || oldName===newName) return 0;
+  let changed=0; const affected=new Set();
+  Object.values(SECTIONS).forEach(s => {
+    (s.entries||[]).forEach(e => { if((e.scion||'')===oldName){ e.scion=newName; changed++; affected.add(s.id); } });
+  });
+  if(changed===0) return 0;
+  for(const id of affected){ const s=SECTIONS[id]; if(s) await saveSectionToCloud(s); }
+  return changed;
+}
+function openRenameModal(){
+  const sel=document.getElementById('rename-old');
+  const counts=_scionCounts();
+  const names=Object.keys(counts).sort((a,b)=>a.localeCompare(b));
+  sel.innerHTML = names.length
+    ? names.map(v=>'<option value="'+v.replace(/"/g,'&quot;')+'">'+v+' ('+counts[v]+' '+(counts[v]===1?'entry':'entries')+')</option>').join('')
+    : '<option value="">— no varieties in use —</option>';
+  document.getElementById('rename-new').value='';
+  onRenameOldChange();
+  document.getElementById('modal-rename').classList.add('open');
+}
+function closeRenameModal(){ document.getElementById('modal-rename').classList.remove('open'); }
+function onRenameOldChange(){
+  const oldName=(document.getElementById('rename-old').value||'').trim();
+  const newName=(document.getElementById('rename-new').value||'').trim();
+  const counts=_scionCounts();
+  const n=counts[oldName]||0;
+  const imp=document.getElementById('rename-impact');
+  const btn=document.getElementById('rename-confirm-btn');
+  const disable=(msg)=>{ imp.innerHTML=msg; btn.disabled=true; btn.style.opacity=.5; };
+  if(!oldName) return disable('');
+  if(!newName) return disable('Enter a new name to rename '+n+' '+(n===1?'entry':'entries')+'.');
+  if(newName===oldName) return disable('New name is the same as the current name.');
+  const merge=(counts[newName]||0)>0 ? ' It will merge into the existing "'+newName+'" ('+counts[newName]+').' : '';
+  imp.innerHTML='Will rename <b>'+n+'</b> '+(n===1?'entry':'entries')+' from "'+oldName+'" &rarr; "<b>'+newName+'</b>" across all houses.'+merge;
+  btn.disabled=false; btn.style.opacity=1;
+}
+async function confirmRename(){
+  const oldName=(document.getElementById('rename-old').value||'').trim();
+  const newName=(document.getElementById('rename-new').value||'').trim();
+  if(!oldName||!newName||oldName===newName) return;
+  const btn=document.getElementById('rename-confirm-btn'); btn.disabled=true; btn.textContent='Renaming…';
+  const n=await renameVariety(oldName, newName);
+  btn.textContent='Rename Everywhere';
+  closeRenameModal();
+  if(typeof renderHome==='function') renderHome();
+  if(typeof renderStats==='function') renderStats();
+  setSaveStatus('saved');
+  alert('Renamed '+n+' '+(n===1?'entry':'entries')+' to "'+newName+'".');
+}
+
 function renderSheetView(filteredSections) {
   // Build flat list of all entries with section reference
   const filterIds = new Set(filteredSections.map(s => s.id));
@@ -2551,7 +2642,7 @@ function renderSheetView(filteredSections) {
     const sellable = Math.floor((e.quantity || 0) * rate / 100);
     const k = s.id + ':' + idx;
     // Build selects with current value pre-selected
-    const scionSel = SCION_OPTIONS.map(v => '<option value="' + v + '"' + (v === (e.scion || '') ? ' selected' : '') + '>' + (v || '— Scion —') + '</option>').join('');
+    const scionSel = _allScions().map(v => '<option value="' + v + '"' + (v === (e.scion || '') ? ' selected' : '') + '>' + (v || '— Scion —') + '</option>').join('');
     const rootSel = ROOTSTOCK_OPTIONS.map(v => '<option value="' + v + '"' + (v === (e.rootstock || '') ? ' selected' : '') + '>' + (v || '— Rootstock —') + '</option>').join('');
 
     return '<tr class="' + cls(s) + '" data-k="' + k + '">' +
@@ -2590,6 +2681,7 @@ function renderSheetView(filteredSections) {
     '<div class="sheet-toolbar">' +
       '<button class="sheet-add-btn" onclick="addSheetRow()">+ Add Row</button>' +
       '<button class="sheet-csv-btn" onclick="exportCsv()">⬇ Export CSV</button>' +
+      '<button class="sheet-csv-btn" onclick="openRenameModal()">✏️ Rename variety</button>' +
       '<input class="sheet-filter" type="text" placeholder="Filter rows..." value="' + _sheetFilter.replace(/"/g,'&quot;') + '" oninput="setSheetFilter(this.value)">' +
       '<span class="sheet-info" id="sheet-save-status">Ready · Click any cell to edit</span>' +
     '</div>' +
@@ -2962,6 +3054,10 @@ function editEntry(idx) {
     else inferredType = 'Grafted Tree';
   }
   document.getElementById('entry-type').value = inferredType;
+  {const scEl=document.getElementById('entry-scion');
+   if(scEl && e.scion && !Array.from(scEl.options).some(o=>o.value===e.scion)){
+     const opt=document.createElement('option'); opt.value=e.scion; opt.textContent=e.scion; scEl.appendChild(opt);
+   }}
   document.getElementById('entry-scion').value = e.scion || '';
   document.getElementById('entry-rootstock').value = e.rootstock || '';
   document.getElementById('entry-transplant').value = e.transplant || '';
