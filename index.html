@@ -346,6 +346,11 @@ table.sheet td.cell-del button:hover { opacity:1; }
       </div>
     </div>
 
+    <label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:8px">
+      <input type="checkbox" id="entry-nonsellable" style="width:16px;height:16px;accent-color:#6D28D9;cursor:pointer;flex-shrink:0">
+      <span data-i18n="lbl_nonsellable" style="font-weight:600">Non-sellable — budwood / increase (excluded from sellable counts)</span>
+    </label>
+
     <!-- LIFECYCLE DATES: Transplant → (+75d) Budding → (+300d) Available -->
     <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:12px;margin-top:6px">
       <div style="font-size:11px;font-weight:700;color:#2D6A4F;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px" data-i18n="lifecycle_header">🌱 Lifecycle Dates (auto-scheduled)</div>
@@ -1975,8 +1980,7 @@ function calcStats() {
         } else {
           // Grafted Tree — current behavior
           planted += qty;
-          const rate = e.takeRate !== undefined ? e.takeRate : 70;
-          sellable += Math.floor(qty * rate / 100);
+          sellable += _entrySellable(e, s);
           reserved += (e.reservedQty || 0);
         }
       });
@@ -2408,6 +2412,21 @@ function _entryType(e) {
   return 'Grafted Tree';
 }
 
+// Sellable trees = grafted trees only, EXCLUDING Increase/Budwood sections and any
+// entry explicitly flagged non-sellable. Budwood/increase trees are never sold, so
+// they must not inflate sellable inventory counts. #1
+function _isNonSellable(entry, section){
+  if (entry && entry.nonSellable === true) return true;
+  if (section && section.sectionType === 'Increase / Budwood') return true;
+  return false;
+}
+function _entrySellable(entry, section){
+  if (_isNonSellable(entry, section)) return 0;
+  if (_entryType(entry) !== 'Grafted Tree') return 0;
+  const rate = entry.takeRate !== undefined ? entry.takeRate : 70;
+  return Math.floor((entry.quantity || 0) * rate / 100);
+}
+
 function _typeBadge(type) {
   if (type === 'Sleeve') return '<span style="display:inline-block;background:#FEF3C7;color:#92400E;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;margin-left:4px;letter-spacing:.04em;text-transform:uppercase">' + t('badge_sleeve') + '</span>';
   if (type === 'Seedling') return '<span style="display:inline-block;background:#DBEAFE;color:#1E40AF;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;margin-left:4px;letter-spacing:.04em;text-transform:uppercase">' + t('badge_seedling') + '</span>';
@@ -2419,7 +2438,7 @@ function buildCard(s) {
   const entries = s.entries || [];
   const isEmpty = entries.length === 0;
   const totalQty = entries.reduce((sum, e) => sum + (e.quantity || 0), 0);
-  const sellable = entries.reduce((sum, e) => sum + Math.floor((e.quantity || 0) * (e.takeRate !== undefined ? e.takeRate : 70) / 100), 0);
+  const sellable = entries.reduce((sum, e) => sum + _entrySellable(e, s), 0);
   const visible = entries.slice(0, 3);
   const more = entries.length - 3;
   const varHtml = isEmpty
@@ -2514,7 +2533,7 @@ function renderSheetView(filteredSections) {
 
   // Totals row
   const tQty = rows.reduce((sum, r) => sum + (r.entry.quantity || 0), 0);
-  const tSellable = rows.reduce((sum, r) => sum + Math.floor((r.entry.quantity || 0) * (r.entry.takeRate !== undefined ? r.entry.takeRate : 70) / 100), 0);
+  const tSellable = rows.reduce((sum, r) => sum + _entrySellable(r.entry, r.section), 0);
   const tReserved = rows.reduce((sum, r) => sum + (r.entry.reservedQty || 0), 0);
 
   const cls = (s) => {
@@ -2819,18 +2838,25 @@ function openSection(sectionId) {
         const i = originalIdx;
         const et = _entryType(e);
         const rate = e.takeRate !== undefined ? e.takeRate : 70;
-        // Sleeves & Seedlings have no sellable count
+        // Sellable = grafted, non-budwood, not flagged. Seedlings/sleeves/budwood show "—". #1
         const isGrafted = (et === 'Grafted Tree');
-        const sellable = isGrafted ? Math.floor((e.quantity || 0) * rate / 100) : 0;
+        const isSellable = isGrafted && !_isNonSellable(e, s);
+        const sellable = _entrySellable(e, s);
         const meta = [];
         const _dl = (lang === 'es') ? 'es-MX' : 'en-US';
         const _fmtD = (ds) => new Date(ds + 'T12:00:00').toLocaleDateString(_dl, {month:'short',day:'numeric',year:'2-digit'});
         // Placement (Row X[A/B/C]) shows first in meta — visible at a glance
         if (e.row) meta.push((lang === 'es' ? 'Fila ' : 'Row ') + e.row + (e.rowSub || ''));
         if (e.transplant) meta.push(e.transplant);
-        if (e.graftDate) meta.push((lang === 'es' ? 'Injerto: ' : 'Graft: ') + _fmtD(e.graftDate));
-        // Show available date (stored or derived) for grafted trees
-        if (isGrafted) {
+        // A seedling's graft date is a PROPOSED bud date (scheduled, not yet grafted). #2
+        if (e.graftDate) {
+          const _budLbl = (et === 'Seedling')
+            ? (lang === 'es' ? '🌱 Injertar: ' : '🌱 Bud→ ')
+            : (lang === 'es' ? 'Injerto: ' : 'Graft: ');
+          meta.push(_budLbl + _fmtD(e.graftDate));
+        }
+        // Show available date (stored or derived) for sellable grafted trees
+        if (isSellable) {
           const av = _availableDate(e);
           if (av) meta.push((lang === 'es' ? 'Disp: ' : 'Avail: ') + _fmtD(av));
         }
@@ -2838,13 +2864,13 @@ function openSection(sectionId) {
         // Label varies by type
         let scionLabel;
         if (et === 'Sleeve') scionLabel = '<em style="color:#92400E">' + t('label_empty_sleeves') + '</em>';
-        else if (et === 'Seedling') scionLabel = '<em style="color:#1E40AF">' + t('badge_seedling').charAt(0) + t('badge_seedling').slice(1).toLowerCase() + '</em>';
+        else if (et === 'Seedling') scionLabel = '<em style="color:#1E40AF">' + t('badge_seedling').charAt(0) + t('badge_seedling').slice(1).toLowerCase() + '</em>' + (e.scion ? ' <span style="color:#6B7280">→ ' + e.scion + '</span>' : '');
         else scionLabel = e.scion || '—';
         return '<div class="entry-row" onclick="editEntry(' + i + ')">' +
-          '<div><div class="entry-scion">' + scionLabel + _typeBadge(et) + '</div>' + (meta.length ? '<div class="entry-meta">' + meta.join(' · ') + '</div>' : '') + '</div>' +
+          '<div><div class="entry-scion">' + scionLabel + _typeBadge(et) + (_isNonSellable(e, s) && isGrafted ? '<span style="display:inline-block;background:#EDE9FE;color:#6D28D9;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;margin-left:4px;letter-spacing:.04em;text-transform:uppercase">Non-sellable</span>' : '') + '</div>' + (meta.length ? '<div class="entry-meta">' + meta.join(' · ') + '</div>' : '') + '</div>' +
           '<div class="entry-rootstock">' + (e.rootstock || '—') + '</div>' +
-          '<div class="entry-qty">' + (e.quantity || 0).toLocaleString() + (isGrafted ? '<div class="entry-meta" style="margin-top:2px">' + rate + '%</div>' : '') + '</div>' +
-          '<div class="entry-sellable">' + (isGrafted ? sellable.toLocaleString() : '—') + '</div>' +
+          '<div class="entry-qty">' + (e.quantity || 0).toLocaleString() + (isSellable ? '<div class="entry-meta" style="margin-top:2px">' + rate + '%</div>' : '') + '</div>' +
+          '<div class="entry-sellable">' + (isSellable ? sellable.toLocaleString() : '—') + '</div>' +
           '<button class="del-btn" onclick="event.stopPropagation();deleteEntry(' + i + ')">✕</button>' +
         '</div>';
       }).join('') +
@@ -2912,6 +2938,7 @@ function addEntry() {
   ['entry-scion','entry-rootstock','entry-transplant','entry-qty','entry-graft','entry-shipment','entry-row','entry-rowsub','entry-transplant-date','entry-available'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('entry-takerate').value = 85;
   document.getElementById('entry-type').value = 'Grafted Tree';
+  document.getElementById('entry-nonsellable').checked = (s.sectionType === 'Increase / Budwood');
   document.getElementById('modal-entry').classList.add('open');
 }
 
@@ -2946,6 +2973,7 @@ function editEntry(idx) {
   document.getElementById('entry-rowsub').value = e.rowSub || '';
   document.getElementById('entry-transplant-date').value = e.transplantDate || '';
   document.getElementById('entry-available').value = e.availableDate || '';
+  document.getElementById('entry-nonsellable').checked = (e.nonSellable === true) || (s.sectionType === 'Increase / Budwood');
   document.getElementById('modal-entry').classList.add('open');
 }
 
@@ -2967,6 +2995,7 @@ async function saveEntry() {
     rowSub: document.getElementById('entry-rowsub').value || '',
     transplantDate: document.getElementById('entry-transplant-date').value || '',
     availableDate: document.getElementById('entry-available').value || '',
+    nonSellable: document.getElementById('entry-nonsellable').checked,
     reservedQty: currentEntryIdx !== null && s.entries[currentEntryIdx] ? (s.entries[currentEntryIdx].reservedQty || 0) : 0,
   };
   // Sleeves don't have scion, rootstock, take rate, or graft date — clean them out
@@ -2975,11 +3004,10 @@ async function saveEntry() {
     entry.rootstock = '';
     entry.graftDate = '';
   }
-  // Seedlings don't have scion or graft date (not grafted yet)
-  if (entry.type === 'Seedling') {
-    entry.scion = '';
-    entry.graftDate = '';
-  }
+  // Seedlings aren't grafted yet, but MAY carry a proposed scion and a proposed
+  // bud/graft date so they can be scheduled and assigned from the Tracker. Keep both.
+  // They still don't count toward sellable (see _entrySellable / calcStats). #2
+  // (No wipe here — a Seedling with a graftDate = "scheduled to bud on that date".)
   // Validate per-type
   if (entry.type === 'Sleeve') {
     if (!entry.quantity) { alert(t('alert_qty_sleeves')); return; }
@@ -3312,9 +3340,8 @@ function exportReport() {
     (s.entries || []).forEach(e => {
       const key = (e.scion || 'No scion') + ' / ' + (e.rootstock || 'No rootstock');
       if (!byVariety[key]) byVariety[key] = { qty:0, sellable:0, reserved:0, locations:[] };
-      const rate = e.takeRate !== undefined ? e.takeRate : 70;
       byVariety[key].qty += e.quantity || 0;
-      byVariety[key].sellable += Math.floor((e.quantity || 0) * rate / 100);
+      byVariety[key].sellable += _entrySellable(e, s);
       byVariety[key].reserved += e.reservedQty || 0;
       byVariety[key].locations.push(s.house + ' ' + s.subhouse);
     });
@@ -3329,7 +3356,7 @@ function exportReport() {
   ).join('');
   const houseRows = Object.values(SECTIONS).filter(s => s.entries && s.entries.length > 0).map(s => {
     const totalQty = s.entries.reduce((sum, e) => sum + (e.quantity || 0), 0);
-    const sellable = s.entries.reduce((sum, e) => sum + Math.floor((e.quantity || 0) * (e.takeRate !== undefined ? e.takeRate : 70) / 100), 0);
+    const sellable = s.entries.reduce((sum, e) => sum + _entrySellable(e, s), 0);
     const varieties = s.entries.map(e => (e.scion || '—') + (e.rootstock ? '/' + e.rootstock : '')).slice(0,5).join(', ') + (s.entries.length > 5 ? ' …' : '');
     return '<tr><td style="padding:9px 12px;font-size:13px;border-bottom:1px solid #F3F4F6;font-weight:600">' + s.house + ' · ' + s.subhouse + '</td>' +
       '<td style="padding:9px 12px;font-size:11px;color:#6B7280;border-bottom:1px solid #F3F4F6">' + s.sectionType + '</td>' +
