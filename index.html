@@ -245,40 +245,9 @@ table.sheet td.cell-del button:hover { opacity:1; }
     <div style="font-size:18px;font-weight:800;margin-bottom:4px" id="entry-modal-title" data-i18n="modal_add_entry">Add Variety Entry</div>
     <div style="font-size:12px;color:var(--tx3);margin-bottom:14px" id="entry-modal-section"></div>
 
-    <label class="form-label" data-i18n="lbl_type">Type</label>
-    <select class="form-input" id="entry-type">
-      <option value="Grafted Tree" data-i18n="type_grafted">Grafted Tree (default)</option>
-      <option value="Seedling" data-i18n="type_seedling">Seedling (rootstock only, not grafted yet)</option>
-      <option value="Sleeve" data-i18n="type_sleeve">Sleeve (empty, awaiting seedling)</option>
-    </select>
-
-    <label class="form-label" data-i18n="lbl_placement">Placement (Row in House)</label>
-    <div class="form-row">
-      <div>
-        <select class="form-input" id="entry-row">
-          <option value="" data-i18n="opt_row">— Row —</option>
-          <option value="1">Row 1</option>
-          <option value="2">Row 2</option>
-          <option value="3">Row 3</option>
-          <option value="4">Row 4</option>
-          <option value="5">Row 5</option>
-          <option value="6">Row 6</option>
-          <option value="7">Row 7</option>
-          <option value="8">Row 8</option>
-        </select>
-      </div>
-      <div>
-        <select class="form-input" id="entry-rowsub">
-          <option value="" data-i18n="opt_sub">— Sub (optional) —</option>
-          <option value="A">A</option>
-          <option value="B">B</option>
-          <option value="C">C</option>
-        </select>
-      </div>
-    </div>
-
+    <!-- 7/29 SIMPLIFIED ENTRY · primary: variety / rootstock / planted date / qty -->
     <label class="form-label" data-i18n="lbl_scion">Scion / Variety</label>
-    <select class="form-input" id="entry-scion">
+<select class="form-input" id="entry-scion">
       <option value="" data-i18n="opt_select_scion">— Select scion —</option>
       <option value="None">None (rootstock only)</option>
       <option value="Tango">Tango</option>
@@ -316,7 +285,7 @@ table.sheet td.cell-del button:hover { opacity:1; }
     </select>
 
     <label class="form-label" data-i18n="lbl_rootstock">Rootstock</label>
-    <select class="form-input" id="entry-rootstock">
+<select class="form-input" id="entry-rootstock">
       <option value="" data-i18n="opt_select_rootstock">— Select rootstock —</option>
       <option value="None" data-i18n="opt_none">None</option>
       <option value="Carrizo">Carrizo</option>
@@ -332,50 +301,81 @@ table.sheet td.cell-del button:hover { opacity:1; }
       <option value="Other">Other</option>
     </select>
 
-    <label class="form-label" data-i18n="lbl_transplant">Transplant / Notes</label>
-    <input class="form-input" id="entry-transplant" type="text" placeholder="Optional notes" data-i18n-ph="ph_optional_notes">
-
     <div class="form-row">
       <div>
-        <label class="form-label" data-i18n="lbl_quantity">Quantity</label>
-        <input class="form-input" id="entry-qty" type="number" min="0" placeholder="e.g. 5000" data-i18n-ph="ph_qty_example">
+        <label class="form-label" data-i18n="lbl_transplant_date">Planted Date</label>
+        <input class="form-input" id="entry-transplant-date" type="date" onchange="onTransplantDateChange()">
       </div>
       <div>
-        <label class="form-label" data-i18n="lbl_take_rate">Take Rate %</label>
-        <input class="form-input" id="entry-takerate" type="number" min="0" max="100" value="70">
+        <label class="form-label" data-i18n="lbl_graft_date">Graft Date</label>
+        <input class="form-input" id="entry-graft" type="date" onchange="onGraftDateChange()">
+      </div>
+    </div>
+    <div style="font-size:10px;color:#6B7280;margin:-4px 0 8px;font-style:italic" data-i18n="hint_graft_auto">Graft date fills in automatically 75 days after the planted date \u2014 change it to the actual date once budded.</div>
+
+    <label class="form-label" data-i18n="lbl_quantity">Quantity</label>
+    <input class="form-input" id="entry-qty" type="number" min="0" placeholder="e.g. 5000" data-i18n-ph="ph_qty_example">
+
+    <label class="form-label" data-i18n="lbl_placement">Placement (Row in House)</label>
+    <div class="form-row">
+      <div>
+<select class="form-input" id="entry-row">
+          <option value="" data-i18n="opt_row">— Row —</option>
+          <option value="1">Row 1</option>
+          <option value="2">Row 2</option>
+          <option value="3">Row 3</option>
+          <option value="4">Row 4</option>
+          <option value="5">Row 5</option>
+          <option value="6">Row 6</option>
+          <option value="7">Row 7</option>
+          <option value="8">Row 8</option>
+        </select>
+      </div>
+      <div>
+<select class="form-input" id="entry-rowsub">
+          <option value="" data-i18n="opt_sub">— Sub (optional) —</option>
+          <option value="A">A</option>
+          <option value="B">B</option>
+          <option value="C">C</option>
+        </select>
       </div>
     </div>
 
-    <label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:8px">
-      <input type="checkbox" id="entry-nonsellable" style="width:16px;height:16px;accent-color:#6D28D9;cursor:pointer;flex-shrink:0">
-      <span data-i18n="lbl_nonsellable" style="font-weight:600">Non-sellable — budwood / increase (excluded from sellable counts)</span>
-    </label>
+    <!-- Everything below is optional. Take rate, lifecycle dates and shipment year
+         still drive sellable counts and the Forecast view; they just default now. -->
+    <details id="entry-more" style="margin-top:14px;border:1px solid var(--bd,#E5E7EB);border-radius:10px;padding:10px 12px;background:#FAFAFA">
+      <summary style="cursor:pointer;font-size:12px;font-weight:700;color:#2D6A4F;letter-spacing:.02em" data-i18n="lbl_more_options">⚙️ More options — type, take rate, available &amp; ship dates</summary>
 
-    <!-- LIFECYCLE DATES: Transplant → (+75d) Budding → (+300d) Available -->
-    <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:12px;margin-top:6px">
-      <div style="font-size:11px;font-weight:700;color:#2D6A4F;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px" data-i18n="lifecycle_header">🌱 Lifecycle Dates (auto-scheduled)</div>
-      <div class="form-row">
-        <div>
-          <label class="form-label" data-i18n="lbl_transplant_date">Transplant Date</label>
-          <input class="form-input" id="entry-transplant-date" type="date" onchange="onTransplantDateChange()">
-        </div>
-        <div>
-          <label class="form-label" data-i18n="lbl_graft_date">Graft Date</label>
-          <input class="form-input" id="entry-graft" type="date" onchange="onGraftDateChange()">
-        </div>
-      </div>
-      <div class="form-row" style="margin-top:8px">
+      <label class="form-label" style="margin-top:10px" data-i18n="lbl_type">Type</label>
+<select class="form-input" id="entry-type">
+      <option value="Grafted Tree" data-i18n="type_grafted">Grafted Tree (default)</option>
+      <option value="Seedling" data-i18n="type_seedling">Seedling (rootstock only, not grafted yet)</option>
+      <option value="Sleeve" data-i18n="type_sleeve">Sleeve (empty, awaiting seedling)</option>
+    </select>
+
+      <label class="form-label" data-i18n="lbl_transplant">Notes</label>
+      <input class="form-input" id="entry-transplant" type="text" placeholder="Optional notes" data-i18n-ph="ph_optional_notes">
+
+      <label class="form-label" data-i18n="lbl_take_rate">Take Rate %</label>
+      <input class="form-input" id="entry-takerate" type="number" min="0" max="100" value="70">
+
+      <label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:8px">
+        <input type="checkbox" id="entry-nonsellable" style="width:16px;height:16px;accent-color:#6D28D9;cursor:pointer;flex-shrink:0">
+        <span data-i18n="lbl_nonsellable" style="font-weight:600">Non-sellable — budwood / increase (excluded from sellable counts)</span>
+      </label>
+
+      <div class="form-row" style="margin-top:10px">
         <div>
           <label class="form-label" data-i18n="lbl_available_date">Available Date</label>
-          <input class="form-input" id="entry-available" type="date">
+          <input class="form-input" id="entry-available" type="date" onchange="onAvailableDateChange()">
         </div>
         <div>
           <label class="form-label" data-i18n="lbl_shipment_year">Shipment Year</label>
           <input class="form-input" id="entry-shipment" type="text" placeholder="e.g. 2026" data-i18n-ph="ph_year_example">
         </div>
       </div>
-      <div style="font-size:10px;color:#6B7280;margin-top:6px;font-style:italic" data-i18n="lifecycle_hint">Transplant + 75 days = Budding · Graft + 300 days = Available. Edit any date to override.</div>
-    </div>
+      <div style="font-size:10px;color:#6B7280;margin-top:6px;font-style:italic" data-i18n="lifecycle_hint">Planted + 75 days = Budding · Graft + 300 days = Available. Edit any date to override.</div>
+    </details>
 
     <div class="form-actions">
       <button class="btn-cancel" onclick="closeEntryModal()" data-i18n="btn_cancel">Cancel</button>
@@ -444,6 +444,16 @@ table.sheet td.cell-del button:hover { opacity:1; }
 </div>
 
 <script>
+/* ══ 7/29/2026 SCOPE REDUCTION ════════════════════════════════════════════
+   Per the 7/29 meeting: the Tracker is a STANDALONE inventory tool.
+     · No CRM communication (nursery_tasks bridge severed)
+     · No task assignment (Tasks view + Add Task removed)
+     · Entry form simplified to house / variety / rootstock / planted date / qty
+   Take rate, sellable counts, and the Forecast view are UNCHANGED.
+   TO REVERSE: set either flag to false. No code was deleted.
+   ════════════════════════════════════════════════════════════════════════ */
+const TRK_STANDALONE   = true;   // false → restores Tasks view + CRM task bridge
+const TRK_SIMPLE_ENTRY = true;   // false → restores the full flat entry form
 const SECTIONS = {
   'H1-North1': {
     id: 'H1-North1',
@@ -1451,10 +1461,11 @@ const T_DICT = {
     lbl_take_rate: 'Take Rate %',
     lbl_graft_date: 'Graft Date',
     lbl_shipment_year: 'Shipment Year',
-    lbl_transplant_date: 'Transplant Date',
+    lbl_transplant_date: 'Planted Date',
     lbl_available_date: 'Available Date',
     lifecycle_header: '🌱 Lifecycle Dates (auto-scheduled)',
     lifecycle_hint: 'Transplant + 75 days = Budding · Graft + 300 days = Available. Edit any date to override.',
+    hint_graft_auto: 'Graft date fills in automatically 75 days after the planted date \u2014 change it to the actual date once budded.',
     ph_year_example: 'e.g. 2026',
     btn_cancel: 'Cancel',
     btn_save_entry: 'Save Entry',
@@ -1597,10 +1608,11 @@ const T_DICT = {
     lbl_take_rate: 'Tasa de Prendimiento %',
     lbl_graft_date: 'Fecha de Injerto',
     lbl_shipment_year: 'Ano de Envio',
-    lbl_transplant_date: 'Fecha de Trasplante',
+    lbl_transplant_date: 'Fecha de Plantado',
     lbl_available_date: 'Fecha Disponible',
     lifecycle_header: '🌱 Fechas del Ciclo (programadas automaticamente)',
     lifecycle_hint: 'Trasplante + 75 dias = Injerto · Injerto + 300 dias = Disponible. Edite cualquier fecha para cambiar.',
+    hint_graft_auto: 'La fecha de injerto se llena automaticamente 75 dias despues de la fecha de plantado \u2014 cambiela a la fecha real cuando se injerte.',
     ph_year_example: 'ej. 2026',
     btn_cancel: 'Cancelar',
     btn_save_entry: 'Guardar Variedad',
@@ -1786,7 +1798,7 @@ async function loadFromCloud() {
     }
     
     // Load pending tasks
-    const tr = await sb.from('nursery_tasks').select('*').eq('status', 'pending');
+    const tr = TRK_STANDALONE ? { data: null } : await sb.from('nursery_tasks').select('*').eq('status', 'pending');
     if (tr.data) {
       // Reset tasks first so we don't double-add on reload
       Object.values(SECTIONS).forEach(s => { s.tasks = []; });
@@ -1920,8 +1932,8 @@ function startRealtimeSubscriptions() {
     })
     .subscribe();
   
-  // Subscribe to task changes
-  sb.channel('nursery-tasks-realtime')
+  // Subscribe to task changes  (7/29: skipped in standalone mode)
+  if (!TRK_STANDALONE) sb.channel('nursery-tasks-realtime')
     .on('postgres_changes', {event: '*', schema: 'public', table: 'nursery_tasks'}, async () => {
       // Easiest: just reload all pending tasks
       const tr = await sb.from('nursery_tasks').select('*').eq('status', 'pending');
@@ -1961,6 +1973,7 @@ async function saveSectionToCloud(s) {
 }
 
 async function saveTaskToCloud(sectionId, task, date, assignee) {
+  if (TRK_STANDALONE) return null;   // 7/29: no task assignment
   if (!cloudOk) return null;
   try {
     const { data, error } = await sb.from('nursery_tasks').insert({
@@ -2024,10 +2037,11 @@ function renderStats() {
     '<div class="stat-pill"><div class="stat-num">' + s.reserved.toLocaleString() + '</div><div class="stat-lbl">' + t('stat_reserved') + '</div></div>' +
     '<div class="stat-pill" style="background:#FEF3C7;border-color:#FDE68A;"><div class="stat-num" style="color:#92400E">' + s.sleeves.toLocaleString() + '</div><div class="stat-lbl">' + t('stat_sleeves') + '</div></div>' +
     '<div class="stat-pill" style="background:#DBEAFE;border-color:#BFDBFE;"><div class="stat-num" style="color:#1E40AF">' + s.seedlings.toLocaleString() + '</div><div class="stat-lbl">' + t('stat_seedlings') + '</div></div>' +
-    '<div class="stat-pill"><div class="stat-num">' + s.tasks + '</div><div class="stat-lbl">' + t('stat_tasks') + '</div></div>';
+    (TRK_STANDALONE ? '' : '<div class="stat-pill"><div class="stat-num">' + s.tasks + '</div><div class="stat-lbl">' + t('stat_tasks') + '</div></div>');
 }
 
 function setView(view) {
+  if (TRK_STANDALONE && view === 'tasks') view = 'list';   // 7/29: Tasks view retired
   currentView = view;
   document.getElementById('view-list-btn').classList.toggle('active', view === 'list');
   document.getElementById('view-map-btn').classList.toggle('active', view === 'map');
@@ -2185,6 +2199,7 @@ let _taskFilter = { assignee: 'all', section: 'all' };
 let _nurseryTaskRows = []; // populated from Supabase nursery_tasks table
 
 async function _loadNurseryTaskRows() {
+  if (TRK_STANDALONE) { _nurseryTaskRows = []; return; }
   if (!cloudOk || !sb) { _nurseryTaskRows = []; return; }
   try {
     const { data, error } = await sb.from('nursery_tasks').select('*').eq('status', 'pending').order('scheduled_date', { nullsFirst: false });
@@ -2412,9 +2427,18 @@ function onGraftDateChange() {
   const gEl = document.getElementById('entry-graft');
   const aEl = document.getElementById('entry-available');
   if (!gEl || !aEl) return;
-  if (gEl.value && !aEl.value) {
+  if (!gEl.value) return;
+  // Recompute unless the user has taken ownership of the Available date.
+  if (!aEl.value || aEl.dataset.autoAvail === '1') {
     aEl.value = _addDays(gEl.value, DAYS_GRAFT_TO_AVAILABLE);
+    aEl.dataset.autoAvail = '1';
   }
+}
+
+// Typing in Available Date claims it — auto-scheduling stops overwriting it.
+function onAvailableDateChange() {
+  const aEl = document.getElementById('entry-available');
+  if (aEl) aEl.dataset.autoAvail = '0';
 }
 
 // Compute the effective available date for an entry (stored, or derived from graft/transplant)
@@ -2997,17 +3021,18 @@ function openSection(sectionId) {
       '</div>' +
       entriesHtml +
       '<button class="add-entry-btn" onclick="addEntry()">+ ' + (lang === 'es' ? 'Agregar Variedad' : 'Add Variety Entry') + '</button>' +
+      (TRK_STANDALONE ? '' :
       '<div style="margin-top:24px">' +
         '<div class="section-title"><span>' + t('active_tasks') + ' (' + activeTasks.length + ')</span></div>' +
         (tasksHtml ? '<div class="tasks-list">' + tasksHtml + '</div>' : '<div class="no-tasks">' + (lang === 'es' ? 'No hay tareas activas para esta casa' : 'No active tasks for this house') + '</div>') +
-      '</div>' +
+      '</div>') +
       '<div style="margin-top:24px">' +
         '<div class="section-title"><span>' + (lang === 'es' ? 'Historial' : 'History') + '</span></div>' +
         '<div id="section-history-content"><div style="padding:14px 12px;color:#9CA3AF;font-size:13px;text-align:center">' + (lang === 'es' ? 'Cargando...' : 'Loading…') + '</div></div>' +
       '</div>' +
       '<div class="action-bar">' +
         '<button class="btn-primary" onclick="addEntry()">🌱 ' + (lang === 'es' ? 'Agregar Variedad' : 'Add Variety') + '</button>' +
-        '<button class="btn-secondary" onclick="openTaskModal()">📋 ' + (lang === 'es' ? 'Agregar Tarea' : 'Add Task') + '</button>' +
+        (TRK_STANDALONE ? '' : '<button class="btn-secondary" onclick="openTaskModal()">📋 ' + (lang === 'es' ? 'Agregar Tarea' : 'Add Task') + '</button>') +
       '</div>' +
     '</div>';
 
@@ -3028,7 +3053,8 @@ function addEntry() {
   document.getElementById('entry-modal-title').textContent = t('modal_add_entry');
   document.getElementById('entry-modal-section').textContent = tHouse(s.house) + ' · ' + tSubhouse(s.subhouse) + ' · ' + s.sectionType;
   ['entry-scion','entry-rootstock','entry-transplant','entry-qty','entry-graft','entry-shipment','entry-row','entry-rowsub','entry-transplant-date','entry-available'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('entry-takerate').value = 85;
+  document.getElementById('entry-takerate').value = 70;   // 7/29: matches the 70% standard (was hardcoded 85)
+  { const _a = document.getElementById('entry-available'); if (_a) _a.dataset.autoAvail = '1'; }
   document.getElementById('entry-type').value = 'Grafted Tree';
   document.getElementById('entry-nonsellable').checked = (s.sectionType === 'Increase / Budwood');
   document.getElementById('modal-entry').classList.add('open');
@@ -3069,6 +3095,11 @@ function editEntry(idx) {
   document.getElementById('entry-rowsub').value = e.rowSub || '';
   document.getElementById('entry-transplant-date').value = e.transplantDate || '';
   document.getElementById('entry-available').value = e.availableDate || '';
+  { // Was this Available date auto-derived, or hand-entered? Only the former may be recomputed.
+    const _a = document.getElementById('entry-available');
+    const _derived = e.graftDate ? _addDays(e.graftDate, DAYS_GRAFT_TO_AVAILABLE) : '';
+    if (_a) _a.dataset.autoAvail = (!e.availableDate || e.availableDate === _derived) ? '1' : '0';
+  }
   document.getElementById('entry-nonsellable').checked = (e.nonSellable === true) || (s.sectionType === 'Increase / Budwood');
   document.getElementById('modal-entry').classList.add('open');
 }
@@ -3168,6 +3199,7 @@ function _uuid() {
 }
 
 async function _saveTaskToCloudWithId(taskId, sectionId, task, date, assignee) {
+  if (TRK_STANDALONE) return null;   // 7/29: no task assignment
   if (!cloudOk) return null;
   try {
     const { data, error } = await sb.from('nursery_tasks').insert({
@@ -3608,6 +3640,13 @@ renderHome();
 // Slight delay so SECTIONS is fully populated first
 setTimeout(handleDeepLink, 300);
 window.addEventListener('hashchange', handleDeepLink);
+
+// 7/29: hide retired Tasks nav button in standalone mode
+if (TRK_STANDALONE) {
+  const _tb = document.getElementById('view-tasks-btn');
+  if (_tb) _tb.style.display = 'none';
+  if (currentView === 'tasks') setView('list');
+}
 
 document.getElementById('modal-entry').addEventListener('click', function(e) { if (e.target === this) closeEntryModal(); });
 document.getElementById('modal-task').addEventListener('click', function(e) { if (e.target === this) closeTaskModal(); });
